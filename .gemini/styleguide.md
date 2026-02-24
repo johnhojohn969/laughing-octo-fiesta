@@ -194,3 +194,73 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 7: Caching opportunities evaluated
 - [ ] Section 7: FlexibleSearch-specific checks applied (if Hybris)
 - [ ] Section 8: Every issue follows the structured output format with Location/Issue/Evidence/Impact/Fix
+- [ ] Section 11: All project-specific high-volume table rules checked
+- [ ] Section 11: All project-specific forbidden query patterns verified
+- [ ] Section 11: Project-specific composite index requirements validated
+
+## 11. PROJECT-SPECIFIC PERFORMANCE PRACTICES
+
+**This section contains project-specific rules provided by the DBA team based on production data analysis. These rules are in ADDITION to the general rules above and carry the SAME enforcement level.**
+
+### 11.1 High-Volume Table Registry
+
+The following tables have been identified as high-volume in production. Any query touching these tables MUST comply with the corresponding constraints:
+
+| Table | Estimated Rows | Constraint |
+|-------|---------------|------------|
+| `is32loyaltytransaction` | ~50M | MUST include `transactionDate` range filter in every query. Unbounded queries on this table are automatic CRITICAL. |
+| `is32fulfillmententry` | ~20M | MUST include date range filter OR specific `orderCode` filter. Filtering by `status` alone is prohibited (only 7 distinct values — full scan guaranteed). |
+| `is32returnrequest` | ~8M | MUST NOT be joined with `is32fulfillmententry` without explicit WHERE filters on BOTH sides of the join. Unfiltered join produces ~160B row intermediate result. |
+| `is32loyaltycard` | ~5M | Queries filtering by `customerId` must have an index. Queries using `LOWER()` or other functions on `email` column bypass indexes. |
+| `is32warehouseallocation` | ~2M | Joins on `productCode` column require an index — verify `productCode` is indexed before allowing the join. |
+
+### 11.2 Known Problematic Query Patterns
+
+The DBA team has flagged the following specific patterns as **confirmed performance killers** based on production incident analysis:
+
+1. **`is32loyaltytransaction` filtered by `merchantCode` only**: The `merchantCode` column has ~200 distinct values across 50M rows (low cardinality). Filtering by `merchantCode` alone returns ~250K rows per merchant on average. This query MUST be combined with a `transactionDate` range filter to be acceptable. **Severity: CRITICAL**.
+
+2. **JOIN between `IS32LoyaltyCard` and `IS32LoyaltyTransaction` without `transactionDate` range**: A card can have thousands of transactions. Without date filtering, this join produces explosive result sets. For a single card with 5,000 transactions, the join returns all 5,000 rows. When scanning all cards (~5M), the intermediate result set exceeds available memory. **Severity: CRITICAL**.
+
+3. **`is32fulfillmententry` filtered by `status` only**: With only 7 distinct status values across 20M rows, each status bucket contains ~2.8M rows. The `fulfillStatusIdx` index has extremely low selectivity and the query optimizer may choose a full table scan instead. **Severity: HIGH**.
+
+4. **`FORMAT()` or `YEAR()` function on `is32returnrequest.createdDate`**: The `returnCreatedDateIdx` index exists on `createdDate` but applying FORMAT() or YEAR() functions in the WHERE clause prevents the optimizer from using this index. Use date range comparison (`>= ?startDate AND < ?endDate`) instead. **Severity: HIGH**.
+
+5. **`is32loyaltytransaction.cardNumber` without index**: The `cardNumber` column in `is32loyaltytransaction` does NOT have a dedicated index. Any query using `cardNumber` in a WHERE or JOIN ON clause will cause a full table scan on 50M rows. **Severity: CRITICAL**.
+
+6. **`is32fulfillmententry.orderCode` without index**: The `orderCode` column in `is32fulfillmententry` does NOT have a dedicated index. Any query filtering by `orderCode` on this 20M-row table causes a full table scan. **Severity: CRITICAL**.
+
+7. **`is32returnrequest.orderCode` without index**: The `orderCode` column in `is32returnrequest` does NOT have a dedicated index. Queries filtering or joining on `orderCode` cause full scan on 8M rows. **Severity: HIGH**.
+
+8. **`is32returnrequest.customerUid` without index**: The `customerUid` column in `is32returnrequest` does NOT have a dedicated index. Customer-facing queries filtering by `customerUid` will degrade under load. **Severity: HIGH**.
+
+9. **`is32fulfillmententry.customerUid` without index**: Similar to above — the `customerUid` column lacks an index on a 20M-row table. **Severity: HIGH**.
+
+10. **`is32loyaltytransaction.storeId` without index**: The `storeId` column has no index. Store-level transaction queries will full-scan 50M rows. **Severity: HIGH**.
+
+### 11.3 Required Composite Indexes for Common Query Patterns
+
+The following composite indexes are required based on common query patterns observed in production. If a query uses the listed column combination without a matching composite index, flag it:
+
+| Table | Column Combination | Required Index | Reason |
+|-------|-------------------|----------------|--------|
+| `is32fulfillmententry` | `orderCode` + `status` | `fulfillOrderStatusIdx` | Most common fulfillment lookup pattern. Without composite index, optimizer must scan by one column and filter the other. |
+| `is32fulfillmententry` | `warehouseCode` + `status` + `createdDate` | `fulfillWarehouseStatusDateIdx` | Warehouse pending-entry queries filter on all three columns. |
+| `is32loyaltytransaction` | `cardNumber` + `transactionDate` | `txnCardDateIdx` | Standard transaction history lookup. Without this composite, each card lookup scans entire transaction table. |
+| `is32returnrequest` | `orderCode` + `returnStatus` | `returnOrderStatusIdx` | Return lookup by order with status filter is the most common return query. |
+| `is32returnrequest` | `customerUid` + `returnStatus` | `returnCustomerStatusIdx` | Customer-facing return status queries need both columns indexed together. |
+| `is32loyaltycard` | `tierCode` + `status` | `cardTierStatusIdx` | Tier migration and reporting queries filter on both columns. |
+
+### 11.4 Forbidden Query Patterns
+
+The following patterns are **strictly forbidden** in production code. Flag any occurrence:
+
+1. **`SELECT *` from `is32loyaltytransaction`**: Always specify only the needed columns. The `description` column is LONG_STRING type and loading it unnecessarily adds significant I/O overhead across 50M rows.
+
+2. **LEFT JOIN on `is32loyaltytransaction`**: Always use INNER JOIN with a `transactionDate` range filter. LEFT JOIN without date filter on this 50M-row table creates unbounded intermediate result sets.
+
+3. **Client-side aggregation on `is32loyaltytransaction` data**: Any SUM, COUNT, GROUP BY, or DISTINCT operation on loyalty transaction data MUST be performed in the SQL/FlexibleSearch query, not in Java code. Loading raw transaction rows into JVM heap for aggregation is an OOM risk.
+
+4. **Joining `is32returnrequest` with `is32fulfillmententry` on `orderCode` without additional filters**: Both tables are high-volume. An unfiltered join on `orderCode` (which lacks indexes on both sides) will produce a massive Cartesian-like result. Always add status or date filters on both tables.
+
+5. **Using `LIKE '%keyword%'` on `is32loyaltytransaction.description`**: The description column is LONG_STRING type across 50M rows. A wildcard search on this column will cause extremely slow full table scan with text comparison. Use a search index or restrict to exact match patterns.

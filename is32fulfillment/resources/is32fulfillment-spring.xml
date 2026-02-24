@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+
+    <!-- ==================== DAO Beans ==================== -->
+
+    <bean id="is32FulfillmentEntryDao" class="com.is32.fulfillment.dao.impl.DefaultIS32FulfillmentEntryDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <bean id="is32ReturnRequestDao" class="com.is32.fulfillment.dao.impl.DefaultIS32ReturnRequestDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+    </bean>
+
+    <!-- ==================== Service Beans ==================== -->
+
+    <bean id="is32FulfillmentService" class="com.is32.fulfillment.service.impl.DefaultIS32FulfillmentService">
+        <property name="is32FulfillmentEntryDao" ref="is32FulfillmentEntryDao"/>
+        <property name="is32ReturnRequestDao" ref="is32ReturnRequestDao"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <bean id="is32ReturnService" class="com.is32.fulfillment.service.impl.DefaultIS32ReturnService">
+        <property name="is32ReturnRequestDao" ref="is32ReturnRequestDao"/>
+        <property name="is32FulfillmentEntryDao" ref="is32FulfillmentEntryDao"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+</beans>

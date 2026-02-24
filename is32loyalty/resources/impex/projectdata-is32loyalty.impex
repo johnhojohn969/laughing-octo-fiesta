@@ -1,0 +1,15 @@
+# -----------------------------------------------------------------------
+# [y] hybris Platform
+#
+# Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved.
+# -----------------------------------------------------------------------
+
+# IS32 Loyalty - Project Data
+
+# Member Tier definitions
+INSERT_UPDATE IS32LoyaltyMemberTier; tierCode[unique=true]; tierName[lang=en]; minPoints; maxPoints; multiplier
+; BRONZE ; Bronze Member  ; 0     ; 999   ; 1.0
+; SILVER ; Silver Member  ; 1000  ; 4999  ; 1.5
+; GOLD   ; Gold Member    ; 5000  ; 14999 ; 2.0
+; PLATINUM ; Platinum Member ; 15000 ; 49999 ; 3.0
+; DIAMOND ; Diamond Member  ; 50000 ;       ; 5.0

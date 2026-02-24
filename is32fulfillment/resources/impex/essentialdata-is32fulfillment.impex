@@ -1,0 +1,45 @@
+# -----------------------------------------------------------------------
+# [y] hybris Platform
+#
+# Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved.
+# -----------------------------------------------------------------------
+
+# IS32 Fulfillment - Essential Data
+
+# Enum values for IS32FulfillmentStatus
+INSERT_UPDATE IS32FulfillmentStatus; code[unique=true]
+; PENDING
+; ALLOCATED
+; PICKING
+; PACKED
+; SHIPPED
+; DELIVERED
+; CANCELLED
+
+# Enum values for IS32ReturnStatus
+INSERT_UPDATE IS32ReturnStatus; code[unique=true]
+; REQUESTED
+; APPROVED
+; REJECTED
+; RECEIVED
+; REFUNDED
+; CLOSED
+
+# Enum values for IS32ReturnReason
+INSERT_UPDATE IS32ReturnReason; code[unique=true]
+; DEFECTIVE
+; WRONG_ITEM
+; NOT_AS_DESCRIBED
+; CHANGED_MIND
+; DAMAGED_IN_TRANSIT
+; LATE_DELIVERY
+
+# Enum values for IS32ShipmentStatus
+INSERT_UPDATE IS32ShipmentStatus; code[unique=true]
+; LABEL_CREATED
+; PICKED_UP
+; IN_TRANSIT
+; OUT_FOR_DELIVERY
+; DELIVERED
+; EXCEPTION
+; RETURNED
