@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<extensioninfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="extensioninfo.xsd">
+    <extension abstractclassprefix="GeneratedIS32"
+               classprefix="IS32Core"
+               name="is32core"
+               managersuperclass="de.hybris.platform.jalo.extension.Extension"
+               managedclass="com.is32.core.jalo.IS32CoreManager">
+        <requires-extension name="commerceservices"/>
+        <requires-extension name="catalog"/>
+        <requires-extension name="couponservices"/>
+        <requires-extension name="promotionengineservices"/>
+        <requires-extension name="basecommerce"/>
+        <coremodule generated="true" manager="com.is32.core.jalo.IS32CoreManager" packageroot="com.is32.core"/>
+    </extension>
+</extensioninfo>
