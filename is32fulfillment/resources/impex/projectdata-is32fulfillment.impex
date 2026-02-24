@@ -1,0 +1,15 @@
+# -----------------------------------------------------------------------
+# [y] hybris Platform
+#
+# Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved.
+# -----------------------------------------------------------------------
+
+# IS32 Fulfillment - Project Data
+
+# Sample Warehouse Allocations
+INSERT_UPDATE IS32WarehouseAllocation; allocationId[unique=true]; warehouseCode; productCode; allocatedQty; availableQty
+; WA-001 ; WH-CENTRAL  ; PROD-10001 ; 100 ; 500
+; WA-002 ; WH-CENTRAL  ; PROD-10002 ; 50  ; 300
+; WA-003 ; WH-NORTH    ; PROD-10001 ; 200 ; 800
+; WA-004 ; WH-NORTH    ; PROD-10003 ; 75  ; 150
+; WA-005 ; WH-SOUTH    ; PROD-10002 ; 120 ; 400

@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<items xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="items.xsd">
+
+    <collectiontypes>
+        <collectiontype code="IS32LoyaltyTransactionList" elementtype="IS32LoyaltyTransaction" autocreate="true" generate="true" type="list"/>
+        <collectiontype code="IS32LoyaltyPointBalanceList" elementtype="IS32LoyaltyPointBalance" autocreate="true" generate="true" type="list"/>
+    </collectiontypes>
+
+    <enumtypes>
+        <enumtype code="IS32LoyaltyCardStatus" autocreate="true" generate="true" dynamic="true">
+            <value code="ACTIVE"/>
+            <value code="INACTIVE"/>
+            <value code="SUSPENDED"/>
+            <value code="EXPIRED"/>
+            <value code="CANCELLED"/>
+        </enumtype>
+
+        <enumtype code="IS32LoyaltyTransactionType" autocreate="true" generate="true" dynamic="true">
+            <value code="EARN"/>
+            <value code="REDEEM"/>
+            <value code="ADJUST"/>
+            <value code="EXPIRE"/>
+            <value code="TRANSFER"/>
+            <value code="BONUS"/>
+        </enumtype>
+
+        <enumtype code="IS32LoyaltyPointType" autocreate="true" generate="true" dynamic="true">
+            <value code="BASE"/>
+            <value code="BONUS"/>
+            <value code="PROMOTIONAL"/>
+            <value code="REFERRAL"/>
+        </enumtype>
+    </enumtypes>
+
+    <relations>
+        <relation code="IS32LoyaltyCard2TransactionRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32LoyaltyCard" qualifier="loyaltyCard" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32LoyaltyTransaction" qualifier="transactions" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32LoyaltyCard2PointBalanceRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32LoyaltyCard" qualifier="loyaltyCard" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32LoyaltyPointBalance" qualifier="pointBalances" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32LoyaltyMemberTier2CardRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32LoyaltyMemberTier" qualifier="memberTier" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </sourceElement>
+            <targetElement type="IS32LoyaltyCard" qualifier="loyaltyCards" cardinality="many" collectiontype="set" ordered="false">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+    </relations>
+
+    <itemtypes>
+
+        <!-- IS32 Loyalty Card -->
+        <itemtype code="IS32LoyaltyCard" autocreate="true" generate="true"
+                  jaloclass="com.is32.loyalty.jalo.IS32LoyaltyCard">
+            <deployment table="is32loyaltycard" typecode="25101"/>
+            <attributes>
+                <attribute qualifier="cardNumber" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="customerId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="customerName" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="status" type="IS32LoyaltyCardStatus">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>em().getEnumerationValue("IS32LoyaltyCardStatus","ACTIVE")</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="createdDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="expiryDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="tierCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="totalPointsEarned" type="java.lang.Long">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Long.valueOf(0)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="email" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="cardNumberIdx" unique="true">
+                    <key attribute="cardNumber"/>
+                </index>
+                <index name="cardStatusIdx">
+                    <key attribute="status"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Loyalty Transaction -->
+        <itemtype code="IS32LoyaltyTransaction" autocreate="true" generate="true"
+                  jaloclass="com.is32.loyalty.jalo.IS32LoyaltyTransaction">
+            <deployment table="is32loyaltytransaction" typecode="25102"/>
+            <attributes>
+                <attribute qualifier="transactionId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="cardNumber" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="transactionDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="amount" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="pointsEarned" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="pointsRedeemed" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="transactionType" type="IS32LoyaltyTransactionType">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="merchantCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="merchantName" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="description" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property">
+                        <columntype>
+                            <value>HYBRIS.LONG_STRING</value>
+                        </columntype>
+                    </persistence>
+                </attribute>
+                <attribute qualifier="storeId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="orderCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="txnIdIdx" unique="true">
+                    <key attribute="transactionId"/>
+                </index>
+                <index name="txnDateIdx">
+                    <key attribute="transactionDate"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Loyalty Point Balance -->
+        <itemtype code="IS32LoyaltyPointBalance" autocreate="true" generate="true"
+                  jaloclass="com.is32.loyalty.jalo.IS32LoyaltyPointBalance">
+            <deployment table="is32loyaltypointbalance" typecode="25103"/>
+            <attributes>
+                <attribute qualifier="cardNumber" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="pointType" type="IS32LoyaltyPointType">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="balance" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>Integer.valueOf(0)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="lastUpdated" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="expiryDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="balCardNumberIdx">
+                    <key attribute="cardNumber"/>
+                </index>
+                <index name="balPointTypeIdx">
+                    <key attribute="pointType"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Loyalty Member Tier -->
+        <itemtype code="IS32LoyaltyMemberTier" autocreate="true" generate="true"
+                  jaloclass="com.is32.loyalty.jalo.IS32LoyaltyMemberTier">
+            <deployment table="is32loyaltymembertier" typecode="25104"/>
+            <attributes>
+                <attribute qualifier="tierCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="tierName" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="minPoints" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="maxPoints" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="multiplier" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Double.valueOf(1.0)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="benefits" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property">
+                        <columntype>
+                            <value>HYBRIS.LONG_STRING</value>
+                        </columntype>
+                    </persistence>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="tierCodeIdx" unique="true">
+                    <key attribute="tierCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+    </itemtypes>
+</items>

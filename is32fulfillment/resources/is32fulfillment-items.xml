@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<items xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="items.xsd">
+
+    <collectiontypes>
+        <collectiontype code="IS32ShipmentTrackingList" elementtype="IS32ShipmentTracking" autocreate="true" generate="true" type="list"/>
+        <collectiontype code="IS32WarehouseAllocationList" elementtype="IS32WarehouseAllocation" autocreate="true" generate="true" type="list"/>
+    </collectiontypes>
+
+    <enumtypes>
+        <enumtype code="IS32FulfillmentStatus" autocreate="true" generate="true" dynamic="true">
+            <value code="PENDING"/>
+            <value code="ALLOCATED"/>
+            <value code="PICKING"/>
+            <value code="PACKED"/>
+            <value code="SHIPPED"/>
+            <value code="DELIVERED"/>
+            <value code="CANCELLED"/>
+        </enumtype>
+
+        <enumtype code="IS32ReturnStatus" autocreate="true" generate="true" dynamic="true">
+            <value code="REQUESTED"/>
+            <value code="APPROVED"/>
+            <value code="REJECTED"/>
+            <value code="RECEIVED"/>
+            <value code="REFUNDED"/>
+            <value code="CLOSED"/>
+        </enumtype>
+
+        <enumtype code="IS32ReturnReason" autocreate="true" generate="true" dynamic="true">
+            <value code="DEFECTIVE"/>
+            <value code="WRONG_ITEM"/>
+            <value code="NOT_AS_DESCRIBED"/>
+            <value code="CHANGED_MIND"/>
+            <value code="DAMAGED_IN_TRANSIT"/>
+            <value code="LATE_DELIVERY"/>
+        </enumtype>
+
+        <enumtype code="IS32ShipmentStatus" autocreate="true" generate="true" dynamic="true">
+            <value code="LABEL_CREATED"/>
+            <value code="PICKED_UP"/>
+            <value code="IN_TRANSIT"/>
+            <value code="OUT_FOR_DELIVERY"/>
+            <value code="DELIVERED"/>
+            <value code="EXCEPTION"/>
+            <value code="RETURNED"/>
+        </enumtype>
+    </enumtypes>
+
+    <relations>
+        <relation code="IS32FulfillmentEntry2ShipmentRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32FulfillmentEntry" qualifier="fulfillmentEntry" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32ShipmentTracking" qualifier="shipments" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32FulfillmentEntry2AllocationRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32FulfillmentEntry" qualifier="fulfillmentEntry" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </sourceElement>
+            <targetElement type="IS32WarehouseAllocation" qualifier="allocations" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32ReturnRequest2FulfillmentRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32FulfillmentEntry" qualifier="originalFulfillment" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </sourceElement>
+            <targetElement type="IS32ReturnRequest" qualifier="returnRequests" cardinality="many" collectiontype="set" ordered="false">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+    </relations>
+
+    <itemtypes>
+
+        <!-- IS32 Fulfillment Entry -->
+        <itemtype code="IS32FulfillmentEntry" autocreate="true" generate="true"
+                  jaloclass="com.is32.fulfillment.jalo.IS32FulfillmentEntry">
+            <deployment table="is32fulfillmententry" typecode="25201"/>
+            <attributes>
+                <attribute qualifier="entryId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="orderCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="productCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="status" type="IS32FulfillmentStatus">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>em().getEnumerationValue("IS32FulfillmentStatus","PENDING")</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="warehouseCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="quantity" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="createdDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="modifiedDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="customerUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="shippingAddress" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property">
+                        <columntype>
+                            <value>HYBRIS.LONG_STRING</value>
+                        </columntype>
+                    </persistence>
+                </attribute>
+                <attribute qualifier="priority" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Integer.valueOf(0)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="entryIdIdx" unique="true">
+                    <key attribute="entryId"/>
+                </index>
+                <index name="fulfillStatusIdx">
+                    <key attribute="status"/>
+                </index>
+                <index name="fulfillCreatedDateIdx">
+                    <key attribute="createdDate"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Shipment Tracking -->
+        <itemtype code="IS32ShipmentTracking" autocreate="true" generate="true"
+                  jaloclass="com.is32.fulfillment.jalo.IS32ShipmentTracking">
+            <deployment table="is32shipmenttracking" typecode="25202"/>
+            <attributes>
+                <attribute qualifier="trackingNumber" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="entryId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="carrier" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="shipDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="estimatedDelivery" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="currentLocation" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="shipmentStatus" type="IS32ShipmentStatus">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>em().getEnumerationValue("IS32ShipmentStatus","LABEL_CREATED")</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="weight" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="trackingNumberIdx" unique="true">
+                    <key attribute="trackingNumber"/>
+                </index>
+                <index name="shipEntryIdIdx">
+                    <key attribute="entryId"/>
+                </index>
+                <index name="shipmentStatusIdx">
+                    <key attribute="shipmentStatus"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Return Request -->
+        <itemtype code="IS32ReturnRequest" autocreate="true" generate="true"
+                  jaloclass="com.is32.fulfillment.jalo.IS32ReturnRequest">
+            <deployment table="is32returnrequest" typecode="25203"/>
+            <attributes>
+                <attribute qualifier="requestId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="orderCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="customerUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="reason" type="IS32ReturnReason">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="returnStatus" type="IS32ReturnStatus">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>em().getEnumerationValue("IS32ReturnStatus","REQUESTED")</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="createdDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="processedDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="refundAmount" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="productCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="returnQuantity" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="notes" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property">
+                        <columntype>
+                            <value>HYBRIS.LONG_STRING</value>
+                        </columntype>
+                    </persistence>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="returnRequestIdIdx" unique="true">
+                    <key attribute="requestId"/>
+                </index>
+                <index name="returnStatusIdx">
+                    <key attribute="returnStatus"/>
+                </index>
+                <index name="returnCreatedDateIdx">
+                    <key attribute="createdDate"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Warehouse Allocation -->
+        <itemtype code="IS32WarehouseAllocation" autocreate="true" generate="true"
+                  jaloclass="com.is32.fulfillment.jalo.IS32WarehouseAllocation">
+            <deployment table="is32warehouseallocation" typecode="25204"/>
+            <attributes>
+                <attribute qualifier="allocationId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="warehouseCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="productCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="allocatedQty" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="availableQty" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="lastSyncDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="entryId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="allocationIdIdx" unique="true">
+                    <key attribute="allocationId"/>
+                </index>
+                <index name="warehouseCodeIdx">
+                    <key attribute="warehouseCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+    </itemtypes>
+</items>

@@ -1,0 +1,31 @@
+# -----------------------------------------------------------------------
+# [y] hybris Platform
+#
+# Copyright (c) 2023 SAP SE or an SAP affiliate company. All rights reserved.
+# -----------------------------------------------------------------------
+
+# IS32 Loyalty - Essential Data
+
+# Enum values for IS32LoyaltyCardStatus
+INSERT_UPDATE IS32LoyaltyCardStatus; code[unique=true]
+; ACTIVE
+; INACTIVE
+; SUSPENDED
+; EXPIRED
+; CANCELLED
+
+# Enum values for IS32LoyaltyTransactionType
+INSERT_UPDATE IS32LoyaltyTransactionType; code[unique=true]
+; EARN
+; REDEEM
+; ADJUST
+; EXPIRE
+; TRANSFER
+; BONUS
+
+# Enum values for IS32LoyaltyPointType
+INSERT_UPDATE IS32LoyaltyPointType; code[unique=true]
+; BASE
+; BONUS
+; PROMOTIONAL
+; REFERRAL

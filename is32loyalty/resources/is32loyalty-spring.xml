@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+
+    <!-- ==================== DAO Beans ==================== -->
+
+    <bean id="is32LoyaltyCardDao" class="com.is32.loyalty.dao.impl.DefaultIS32LoyaltyCardDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <bean id="is32LoyaltyTransactionDao" class="com.is32.loyalty.dao.impl.DefaultIS32LoyaltyTransactionDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+    </bean>
+
+    <!-- ==================== Service Beans ==================== -->
+
+    <bean id="is32LoyaltyCardService" class="com.is32.loyalty.service.impl.DefaultIS32LoyaltyCardService">
+        <property name="is32LoyaltyCardDao" ref="is32LoyaltyCardDao"/>
+        <property name="is32LoyaltyTransactionDao" ref="is32LoyaltyTransactionDao"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <bean id="is32LoyaltyTransactionService" class="com.is32.loyalty.service.impl.DefaultIS32LoyaltyTransactionService">
+        <property name="is32LoyaltyTransactionDao" ref="is32LoyaltyTransactionDao"/>
+        <property name="is32LoyaltyCardDao" ref="is32LoyaltyCardDao"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+</beans>
