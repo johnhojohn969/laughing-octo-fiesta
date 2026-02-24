@@ -1,0 +1,45 @@
+# -----------------------------------------------------------------------
+# IS32 Core Essential Data
+# -----------------------------------------------------------------------
+
+# Enum Values
+INSERT_UPDATE IS32PromotionDisplayType; code[unique=true]
+; ESTAMP
+; COUPON
+; POINTS
+; CASHBACK
+; BUNDLE
+
+INSERT_UPDATE IS32PromotionStatus; code[unique=true]
+; ACTIVE
+; INACTIVE
+; EXPIRED
+; DRAFT
+; SUSPENDED
+
+INSERT_UPDATE IS32RewardType; code[unique=true]
+; INCREASE_MEMBER_ACCOUNT
+; DISCOUNT
+; FREE_ITEM
+; POINTS_MULTIPLIER
+; CASHBACK_REWARD
+
+INSERT_UPDATE IS32BucketType; code[unique=true]
+; INCLUDE
+; EXCLUDE
+
+INSERT_UPDATE IS32PromoItemType; code[unique=true]
+; PRODUCT
+; CATEGORY
+; BRAND
+
+# CronJob Definition
+INSERT_UPDATE IS32PromotionCleanupCronJob; code[unique=true]; job(code); daysBeforeExpiry; cleanupBatchSize; sessionLanguage(isocode)
+; is32PromotionCleanupCronJob; is32PromotionCleanupJob; 30; 100; en
+
+INSERT_UPDATE ServicelayerJob; code[unique=true]; springId
+; is32PromotionCleanupJob; is32PromotionCleanupJob
+
+# Trigger for CronJob (runs daily at 2 AM)
+INSERT_UPDATE Trigger; cronJob(code)[unique=true]; cronExpression
+; is32PromotionCleanupCronJob; 0 0 2 * * ?

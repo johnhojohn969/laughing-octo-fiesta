@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- ==================== Populator Beans ==================== -->
+
+    <bean id="is32PromotionPopulator" class="com.is32.facades.populators.IS32PromotionPopulator">
+        <property name="is32PromotionService" ref="is32PromotionService"/>
+    </bean>
+
+    <bean id="accountQuotaPopulator" class="com.is32.facades.populators.AccountQuotaPopulator"/>
+
+    <!-- ==================== Converter Beans ==================== -->
+
+    <bean id="is32PromotionConverter" parent="abstractPopulatingConverter">
+        <property name="targetClass" value="com.is32.facades.dto.PromotionDisplayData"/>
+        <property name="populators">
+            <list>
+                <ref bean="is32PromotionPopulator"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="accountQuotaConverter" parent="abstractPopulatingConverter">
+        <property name="targetClass" value="com.is32.facades.dto.AccountQuotaData"/>
+        <property name="populators">
+            <list>
+                <ref bean="accountQuotaPopulator"/>
+            </list>
+        </property>
+    </bean>
+
+    <!-- ==================== Facade Beans ==================== -->
+
+    <bean id="is32PromotionFacade" class="com.is32.facades.facades.impl.DefaultIS32PromotionFacade">
+        <property name="is32PromotionService" ref="is32PromotionService"/>
+        <property name="is32AccountQuotaService" ref="is32AccountQuotaService"/>
+        <property name="is32PromotionConverter" ref="is32PromotionConverter"/>
+        <property name="accountQuotaConverter" ref="accountQuotaConverter"/>
+        <property name="userService" ref="userService"/>
+    </bean>
+
+</beans>

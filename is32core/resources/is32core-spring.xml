@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+
+    <!-- ==================== DAO Beans ==================== -->
+
+    <bean id="is32PromotionDao" class="com.is32.core.dao.impl.DefaultIS32PromotionDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <bean id="is32AccountQuotaDao" class="com.is32.core.dao.impl.DefaultIS32AccountQuotaDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+    </bean>
+
+    <bean id="is32RewardDao" class="com.is32.core.dao.impl.DefaultIS32RewardDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+    </bean>
+
+    <bean id="eStampTierDao" class="com.is32.core.dao.impl.DefaultEStampTierDao">
+        <property name="flexibleSearchService" ref="flexibleSearchService"/>
+    </bean>
+
+    <!-- ==================== Service Beans ==================== -->
+
+    <bean id="is32PromotionService" class="com.is32.core.service.impl.DefaultIS32PromotionService">
+        <property name="is32PromotionDao" ref="is32PromotionDao"/>
+        <property name="is32AccountQuotaDao" ref="is32AccountQuotaDao"/>
+        <property name="modelService" ref="modelService"/>
+        <property name="sessionService" ref="sessionService"/>
+        <property name="catalogVersionService" ref="catalogVersionService"/>
+    </bean>
+
+    <bean id="is32AccountQuotaService" class="com.is32.core.service.impl.DefaultIS32AccountQuotaService">
+        <property name="is32AccountQuotaDao" ref="is32AccountQuotaDao"/>
+        <property name="userService" ref="userService"/>
+        <property name="catalogVersionService" ref="catalogVersionService"/>
+        <property name="sessionService" ref="sessionService"/>
+    </bean>
+
+    <bean id="is32RewardService" class="com.is32.core.service.impl.DefaultIS32RewardService">
+        <property name="is32RewardDao" ref="is32RewardDao"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <bean id="eStampTierService" class="com.is32.core.service.impl.DefaultEStampTierService">
+        <property name="eStampTierDao" ref="eStampTierDao"/>
+        <property name="modelService" ref="modelService"/>
+    </bean>
+
+    <!-- ==================== Strategy Beans ==================== -->
+
+    <bean id="is32PromotionEvaluationStrategy" class="com.is32.core.strategies.IS32PromotionEvaluationStrategy">
+        <property name="is32PromotionService" ref="is32PromotionService"/>
+        <property name="is32AccountQuotaService" ref="is32AccountQuotaService"/>
+        <property name="modelService" ref="modelService"/>
+        <property name="configurationService" ref="configurationService"/>
+    </bean>
+
+    <!-- ==================== Interceptor Beans ==================== -->
+
+    <bean id="is32PromotionPrepareInterceptor" class="com.is32.core.interceptors.IS32PromotionPrepareInterceptor">
+        <property name="keyGenerator" ref="is32PromotionKeyGenerator"/>
+    </bean>
+
+    <bean id="is32PromotionPrepareInterceptorMapping"
+          class="de.hybris.platform.servicelayer.interceptor.impl.InterceptorMapping">
+        <property name="interceptor" ref="is32PromotionPrepareInterceptor"/>
+        <property name="typeCode" value="IS32Promotion"/>
+    </bean>
+
+    <bean id="is32PromotionValidateInterceptor" class="com.is32.core.interceptors.IS32PromotionValidateInterceptor"/>
+
+    <bean id="is32PromotionValidateInterceptorMapping"
+          class="de.hybris.platform.servicelayer.interceptor.impl.InterceptorMapping">
+        <property name="interceptor" ref="is32PromotionValidateInterceptor"/>
+        <property name="typeCode" value="IS32Promotion"/>
+    </bean>
+
+    <!-- ==================== Key Generator ==================== -->
+
+    <bean id="is32PromotionKeyGenerator"
+          class="de.hybris.platform.servicelayer.keygenerator.impl.PersistentKeyGenerator">
+        <property name="key" value="is32_promotion"/>
+        <property name="digits" value="8"/>
+        <property name="start" value="00000000"/>
+        <property name="type" value="alphanumeric"/>
+        <property name="template" value="IS32-$"/>
+    </bean>
+
+    <!-- ==================== Dynamic Attribute Handlers ==================== -->
+
+    <bean id="is32PromotionActiveHandler" class="com.is32.core.attributehandlers.IS32PromotionActiveHandler">
+        <property name="timeService" ref="timeService"/>
+    </bean>
+
+    <!-- ==================== CronJob Beans ==================== -->
+
+    <bean id="is32PromotionCleanupJob" class="com.is32.core.job.IS32PromotionCleanupJob" parent="abstractJobPerformable">
+        <property name="is32PromotionService" ref="is32PromotionService"/>
+        <property name="modelService" ref="modelService"/>
+        <property name="configurationService" ref="configurationService"/>
+    </bean>
+
+    <!-- ==================== Event Listeners ==================== -->
+
+    <bean id="is32CouponRedemptionEventListener" class="com.is32.core.event.IS32CouponRedemptionEventListener"
+          parent="abstractEventListener">
+        <property name="modelService" ref="modelService"/>
+        <property name="is32PromotionService" ref="is32PromotionService"/>
+        <property name="eStampTierService" ref="eStampTierService"/>
+    </bean>
+
+</beans>

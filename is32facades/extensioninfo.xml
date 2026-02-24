@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<extensioninfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="extensioninfo.xsd">
+    <extension abstractclassprefix="GeneratedIS32Facades"
+               classprefix="IS32Facades"
+               name="is32facades"
+               managersuperclass="de.hybris.platform.jalo.extension.Extension"
+               managedclass="com.is32.facades.jalo.IS32FacadesManager">
+        <requires-extension name="is32core"/>
+        <requires-extension name="commercefacades"/>
+        <requires-extension name="acceleratorfacades"/>
+    </extension>
+</extensioninfo>

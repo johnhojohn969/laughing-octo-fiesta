@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<items xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="items.xsd">
+
+    <collectiontypes>
+        <collectiontype code="IS32RewardList" elementtype="IS32Reward" autocreate="true" generate="true" type="list"/>
+        <collectiontype code="IS32BucketList" elementtype="IS32Bucket" autocreate="true" generate="true" type="list"/>
+        <collectiontype code="IS32PromoItemList" elementtype="IS32PromoItem" autocreate="true" generate="true" type="list"/>
+    </collectiontypes>
+
+    <enumtypes>
+        <enumtype code="IS32PromotionDisplayType" autocreate="true" generate="true" dynamic="true">
+            <value code="ESTAMP"/>
+            <value code="COUPON"/>
+            <value code="POINTS"/>
+            <value code="CASHBACK"/>
+            <value code="BUNDLE"/>
+        </enumtype>
+
+        <enumtype code="IS32PromotionStatus" autocreate="true" generate="true" dynamic="true">
+            <value code="ACTIVE"/>
+            <value code="INACTIVE"/>
+            <value code="EXPIRED"/>
+            <value code="DRAFT"/>
+            <value code="SUSPENDED"/>
+        </enumtype>
+
+        <enumtype code="IS32RewardType" autocreate="true" generate="true" dynamic="true">
+            <value code="INCREASE_MEMBER_ACCOUNT"/>
+            <value code="DISCOUNT"/>
+            <value code="FREE_ITEM"/>
+            <value code="POINTS_MULTIPLIER"/>
+            <value code="CASHBACK_REWARD"/>
+        </enumtype>
+
+        <enumtype code="IS32BucketType" autocreate="true" generate="true" dynamic="true">
+            <value code="INCLUDE"/>
+            <value code="EXCLUDE"/>
+        </enumtype>
+
+        <enumtype code="IS32PromoItemType" autocreate="true" generate="true" dynamic="true">
+            <value code="PRODUCT"/>
+            <value code="CATEGORY"/>
+            <value code="BRAND"/>
+        </enumtype>
+    </enumtypes>
+
+    <relations>
+        <relation code="IS32Promotion2PromotionTagRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32PromotionTag" qualifier="promotionTag" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32Promotion" qualifier="promotions" cardinality="many" collectiontype="set" ordered="false">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32Promotion2RewardRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32Promotion" qualifier="promotion" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32Reward" qualifier="rewards" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32Promotion2ActivityRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32Promotion" qualifier="promotion" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32PromotionActivity" qualifier="activities" cardinality="many" collectiontype="set" ordered="false">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32Promotion2BucketRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32Promotion" qualifier="promotion" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32Bucket" qualifier="buckets" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="IS32Bucket2PromoItemRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="IS32Bucket" qualifier="bucket" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="false"/>
+            </sourceElement>
+            <targetElement type="IS32PromoItem" qualifier="promoItems" cardinality="many" collectiontype="list" ordered="true">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+
+        <relation code="EStampTier2RewardRelation" localized="false" generate="true" autocreate="true">
+            <sourceElement type="EStampTier" qualifier="eStampTier" cardinality="one">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </sourceElement>
+            <targetElement type="IS32Reward" qualifier="linkedRewards" cardinality="many" collectiontype="set" ordered="false">
+                <modifiers read="true" write="true" search="true" optional="true"/>
+            </targetElement>
+        </relation>
+    </relations>
+
+    <itemtypes>
+
+        <!-- IS32 Promotion Tag -->
+        <itemtype code="IS32PromotionTag" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32PromotionTag">
+            <deployment table="is32promotiontag" typecode="25001"/>
+            <attributes>
+                <attribute qualifier="code" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="name" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="elabPromotionDisplayType" type="IS32PromotionDisplayType">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="description" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="codeIdx" unique="true">
+                    <key attribute="code"/>
+                </index>
+                <index name="displayTypeIdx">
+                    <key attribute="elabPromotionDisplayType"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Promotion -->
+        <itemtype code="IS32Promotion" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32Promotion">
+            <deployment table="is32promotion" typecode="25002"/>
+            <attributes>
+                <attribute qualifier="uid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true" initial="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="title" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="description" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="redeemDigitalCoupon" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="status" type="IS32PromotionStatus">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>em().getEnumerationValue("IS32PromotionStatus","DRAFT")</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="suspended" type="java.lang.Boolean">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>java.lang.Boolean.FALSE</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="startDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="endDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="priority" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Integer.valueOf(0)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="maxRedemptionPerUser" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="totalRedemptionLimit" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="termsAndConditions" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property">
+                        <columntype>
+                            <value>HYBRIS.LONG_STRING</value>
+                        </columntype>
+                    </persistence>
+                </attribute>
+                <attribute qualifier="imageUrl" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="isActive" type="java.lang.Boolean">
+                    <modifiers read="true" write="false" search="false" optional="true"/>
+                    <persistence type="dynamic" attributeHandler="is32PromotionActiveHandler"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="uidIdx" unique="true">
+                    <key attribute="uid"/>
+                </index>
+                <index name="statusIdx">
+                    <key attribute="status"/>
+                </index>
+                <index name="dateRangeIdx">
+                    <key attribute="startDate"/>
+                    <key attribute="endDate"/>
+                </index>
+                <index name="statusSuspendedIdx">
+                    <key attribute="status"/>
+                    <key attribute="suspended"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Reward -->
+        <itemtype code="IS32Reward" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32Reward">
+            <deployment table="is32reward" typecode="25003"/>
+            <attributes>
+                <attribute qualifier="promotionUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="rewardType" type="IS32RewardType">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="rewardValue" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="increaseMemberAccountId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="rewardDescription" type="localized:java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="minSpend" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="maxRewardCap" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="promoUidIdx">
+                    <key attribute="promotionUid"/>
+                </index>
+                <index name="rewardTypeIdx">
+                    <key attribute="rewardType"/>
+                </index>
+                <index name="accountIdIdx">
+                    <key attribute="increaseMemberAccountId"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Promotion Activity -->
+        <itemtype code="IS32PromotionActivity" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32PromotionActivity">
+            <deployment table="is32promotionactivity" typecode="25004"/>
+            <attributes>
+                <attribute qualifier="promotionUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="startTime" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="endTime" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="dayOfWeek" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="active" type="java.lang.Boolean">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>java.lang.Boolean.TRUE</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="actPromoUidIdx">
+                    <key attribute="promotionUid"/>
+                </index>
+                <index name="timeRangeIdx">
+                    <key attribute="startTime"/>
+                    <key attribute="endTime"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Bucket -->
+        <itemtype code="IS32Bucket" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32Bucket">
+            <deployment table="is32bucket" typecode="25005"/>
+            <attributes>
+                <attribute qualifier="promotionUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="uniqueId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="bucketName" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="bucketType" type="IS32BucketType">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="minQuantity" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Integer.valueOf(1)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="maxQuantity" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="bucketPromoUidIdx">
+                    <key attribute="promotionUid"/>
+                </index>
+                <index name="uniqueIdIdx" unique="true">
+                    <key attribute="uniqueId"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Promo Item -->
+        <itemtype code="IS32PromoItem" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32PromoItem">
+            <deployment table="is32promoitem" typecode="25006"/>
+            <attributes>
+                <attribute qualifier="bucketUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="itemCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="itemType" type="IS32PromoItemType">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="excludeFlag" type="java.lang.Boolean">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>java.lang.Boolean.FALSE</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="bucketUidIdx">
+                    <key attribute="bucketUid"/>
+                </index>
+                <index name="itemCodeIdx">
+                    <key attribute="itemCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- EStamp Tier -->
+        <itemtype code="EStampTier" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.EStampTier">
+            <deployment table="estamptier" typecode="25007"/>
+            <attributes>
+                <attribute qualifier="accountId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="siebelAcctId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="threshold" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="tierLevel" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="tierName" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="currentStampCount" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Integer.valueOf(0)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="maxStampCount" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="accountIdIdx" unique="true">
+                    <key attribute="accountId"/>
+                </index>
+                <index name="siebelAcctIdIdx">
+                    <key attribute="siebelAcctId"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Promotion Cleanup CronJob -->
+        <itemtype code="IS32PromotionCleanupCronJob" autocreate="true" generate="true"
+                  extends="CronJob"
+                  jaloclass="com.is32.core.jalo.IS32PromotionCleanupCronJob">
+            <attributes>
+                <attribute qualifier="daysBeforeExpiry" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Integer.valueOf(30)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="cleanupBatchSize" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>Integer.valueOf(100)</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+        </itemtype>
+
+    </itemtypes>
+</items>

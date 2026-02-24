@@ -1,0 +1,22 @@
+# -----------------------------------------------------------------------
+# IS32 Promotions Project Data
+# -----------------------------------------------------------------------
+
+$productCatalog=is32ProductCatalog
+$catalogVersion=catalogversion(catalog(id[default=$productCatalog]),version[default='Online'])[unique=true,default=$productCatalog:Online]
+
+# Promotion Tags
+INSERT_UPDATE IS32PromotionTag; code[unique=true]; name[lang=en]; elabPromotionDisplayType(code); description[lang=en]
+; TAG_ESTAMP_01; E-Stamp Collection; ESTAMP; Collect stamps to earn rewards
+; TAG_COUPON_01; Digital Coupon; COUPON; Redeem digital coupons for discounts
+; TAG_POINTS_01; Bonus Points; POINTS; Earn bonus loyalty points
+; TAG_CASHBACK_01; Cashback Offer; CASHBACK; Get cashback on qualifying purchases
+; TAG_BUNDLE_01; Bundle Deal; BUNDLE; Buy bundled products at a discount
+
+# E-Stamp Tiers
+INSERT_UPDATE EStampTier; accountId[unique=true]; siebelAcctId; threshold; tierLevel; tierName; currentStampCount; maxStampCount
+; ACCT_GOLD_001; SBL_G_001; 10; 1; Gold; 0; 50
+; ACCT_GOLD_002; SBL_G_002; 10; 1; Gold; 0; 50
+; ACCT_PLAT_001; SBL_P_001; 20; 2; Platinum; 0; 100
+; ACCT_PLAT_002; SBL_P_002; 20; 2; Platinum; 0; 100
+; ACCT_DIAM_001; SBL_D_001; 30; 3; Diamond; 0; 200
