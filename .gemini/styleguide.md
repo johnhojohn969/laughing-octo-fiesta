@@ -46,37 +46,11 @@ Flag the following patterns as "Potential Slow Performance":
 
 ## 3. JAVA RUNTIME EXCEPTION
 
-Scan for **concrete, triggerable** runtime errors only:
-
-- **Null dereference (NPE)**:
-  - Field injected via setter without null-check at usage point (e.g., `flexibleSearchService` set via `setFlexibleSearchService()` but used directly without guard)
-  - Method parameters not validated before dereferencing (e.g., `customer.getPk()` called without checking `customer != null`)
-  - Return values from framework calls that may return null (e.g., `SearchResult.getResult()` may return null — check for null before calling `.isEmpty()`)
-- **Unsafe cast**
-- **`Optional.get()` without presence check**
-- **Collection access without size/bound checks**
-- **Illegal or invalid state in runtime flow**
-
-Flag issues only when a **real execution path** exists.
-Avoid speculative or "might happen" warnings.
-
-**Important**: Do NOT skip this section even when the primary focus of the review is on query performance. Every Java file must be scanned for runtime exceptions.
+Scan every Java file for concrete runtime errors (NPE, unsafe cast, Optional.get, collection bounds, illegal state). Do NOT skip this section.
 
 ## 4. MEMORY LEAK & MEMORY GROWTH
 
-Scan for long-lived memory retention:
-
-- **Static references holding runtime objects**
-- **Listeners or callbacks not released**
-- **`ThreadLocal` not cleared**
-- **Unbounded collections or caches without eviction**
-- **Promotion context retaining large objects across executions**
-- **Large query results loaded entirely into heap**: Methods returning `List<List<Object>>` or `List<Model>` from multi-table JOINs without pagination. If the result set is unbounded, this is effectively an OOM risk under production load. Recommend streaming (`ScrollableResults`), batching, or adding `setMaxResults()`.
-
-Flag only when objects outlive their expected lifecycle.
-Explain why GC cannot reclaim them and how to fix it.
-
-**Important**: Do NOT skip this section even when the primary focus of the review is on query performance. Every Java file must be scanned for memory issues.
+Scan every Java file for memory retention issues (static refs, unclosed resources, unbounded collections, large result sets in heap). Do NOT skip this section.
 
 ## 5. SPECIFIC RULES & PRACTICES
 
@@ -84,38 +58,38 @@ Explain why GC cannot reclaim them and how to fix it.
 
 **To add new rules**: append a row with Table and Attribute.
 
-| Table | Attribute | Specific Rule |
-|-------|-----------|---------------|
-| any | `FORMAT(col)` / `YEAR(col)` / `LOWER(col)` in WHERE | function on indexed column bypasses index |
-| any | `CAST(col AS ...)` in WHERE | implicit type conversion bypasses index |
-| any | `SUBSTRING(CONVERT(...))` in WHERE | nested functions bypass index |
-| any | `col1 = ? OR col2 = ?` (different columns) | OR across columns prevents single index |
-| any | `col = ? OR col LIKE ?%` | OR with LIKE prevents index seek |
-| `is32loyaltytransaction` (~50M) | any query without `transactionDate` range | unbounded scan on 50M rows |
-| `is32loyaltytransaction` | `merchantCode` without `transactionDate` | low cardinality ~200 values across 50M rows |
-| `is32loyaltytransaction` | `cardNumber` | no index, full scan 50M rows |
-| `is32loyaltytransaction` | `storeId` | no index, full scan 50M rows |
-| `is32loyaltytransaction` | `SELECT *` | `description` is LONG_STRING, massive I/O |
-| `is32loyaltytransaction` | `LEFT JOIN` without `transactionDate` | unbounded intermediate result |
-| `is32loyaltytransaction` | SUM/COUNT/GROUP BY/DISTINCT in Java | aggregation must be in SQL, OOM risk |
-| `is32loyaltytransaction` | `LIKE '%..%'` on `description` | LONG_STRING full scan 50M rows |
-| `is32loyaltytransaction` | `cardNumber` + `transactionDate` | needs composite index `txnCardDateIdx` |
-| `is32loyaltytransaction` + `is32loyaltycard` | JOIN without `transactionDate` range | 1 card × 5K+ txn, explosive join |
-| `is32fulfillmententry` (~20M) | `status` only (no date/orderCode) | 7 values across 20M rows, low selectivity |
-| `is32fulfillmententry` | `orderCode` | no index, full scan 20M rows |
-| `is32fulfillmententry` | `customerUid` | no index, full scan 20M rows |
-| `is32fulfillmententry` | `orderCode` + `status` | needs composite index `fulfillOrderStatusIdx` |
-| `is32fulfillmententry` | `warehouseCode` + `status` + `createdDate` | needs composite index `fulfillWarehouseStatusDateIdx` |
-| `is32returnrequest` (~8M) | `FORMAT(createdDate)` / `YEAR(createdDate)` | bypasses `returnCreatedDateIdx` |
-| `is32returnrequest` | `orderCode` | no index, full scan 8M rows |
-| `is32returnrequest` | `customerUid` | no index, full scan 8M rows |
-| `is32returnrequest` | `orderCode` + `returnStatus` | needs composite index `returnOrderStatusIdx` |
-| `is32returnrequest` | `customerUid` + `returnStatus` | needs composite index `returnCustomerStatusIdx` |
-| `is32returnrequest` + `is32fulfillmententry` | JOIN on `orderCode` without filters on both sides | both high-volume, no index on either side |
-| `is32loyaltycard` (~5M) | `customerId` | requires index |
-| `is32loyaltycard` | `LOWER(email)` / functions on `email` | bypasses index |
-| `is32loyaltycard` | `tierCode` + `status` | needs composite index `cardTierStatusIdx` |
-| `is32warehouseallocation` (~2M) | `productCode` in JOIN | requires index verification |
+| Table | Attribute |
+|-------|-----------|
+| any | `FORMAT(col)` / `YEAR(col)` / `LOWER(col)` in WHERE |
+| any | `CAST(col AS ...)` in WHERE |
+| any | `SUBSTRING(CONVERT(...))` in WHERE |
+| any | `col1 = ? OR col2 = ?` (different columns) |
+| any | `col = ? OR col LIKE ?%` |
+| `is32loyaltytransaction` (~50M) | any query without `transactionDate` range |
+| `is32loyaltytransaction` | `merchantCode` without `transactionDate` |
+| `is32loyaltytransaction` | `cardNumber` |
+| `is32loyaltytransaction` | `storeId` |
+| `is32loyaltytransaction` | `SELECT *` |
+| `is32loyaltytransaction` | `LEFT JOIN` without `transactionDate` |
+| `is32loyaltytransaction` | SUM/COUNT/GROUP BY/DISTINCT in Java |
+| `is32loyaltytransaction` | `LIKE '%..%'` on `description` |
+| `is32loyaltytransaction` | `cardNumber` + `transactionDate` |
+| `is32loyaltytransaction` + `is32loyaltycard` | JOIN without `transactionDate` range |
+| `is32fulfillmententry` (~20M) | `status` only (no date/orderCode) |
+| `is32fulfillmententry` | `orderCode` |
+| `is32fulfillmententry` | `customerUid` |
+| `is32fulfillmententry` | `orderCode` + `status` |
+| `is32fulfillmententry` | `warehouseCode` + `status` + `createdDate` |
+| `is32returnrequest` (~8M) | `FORMAT(createdDate)` / `YEAR(createdDate)` |
+| `is32returnrequest` | `orderCode` |
+| `is32returnrequest` | `customerUid` |
+| `is32returnrequest` | `orderCode` + `returnStatus` |
+| `is32returnrequest` | `customerUid` + `returnStatus` |
+| `is32returnrequest` + `is32fulfillmententry` | JOIN on `orderCode` without filters on both sides |
+| `is32loyaltycard` (~5M) | `customerId` |
+| `is32loyaltycard` | `LOWER(email)` / functions on `email` |
+| `is32loyaltycard` | `tierCode` + `status` |
+| `is32warehouseallocation` (~2M) | `productCode` in JOIN |
 
 ## 6. MULTI-TABLE JOIN REVIEW PROTOCOL
 
