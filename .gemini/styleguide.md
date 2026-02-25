@@ -32,17 +32,19 @@ When reviewing code that includes SQL queries, Hybris FlexibleSearch, or ORM cal
 
 ## 2. Slow Response Patterns
 
-Flag the following patterns as "Potential Slow Performance":
+Flag the following patterns as "Potential Slow Performance". When flagging an issue, reference the Rule index (e.g., `SLOW-01`).
 
-- **Leading Wildcards**: Using `LIKE '%keyword'` (causes full scan).
-- **Functions in WHERE**: Using functions on indexed columns (e.g., `WHERE YEAR(created_at) = 2023`) which prevents index usage.
-- **N+1 Queries**: Detecting loops that execute a database query inside each iteration. Also detect DAO methods returning raw data (e.g., `List<List<Object>>`, `List<Object[]>`) that callers are likely to iterate and re-query. If a DAO method returns raw denormalized data without aggregation, flag it as an N+1 risk and recommend either aggregating in SQL or providing a higher-level method.
-- **Mismatched Data Types**: Comparing a string column with a numeric value (causes implicit conversion and ignores index).
-- **Unbounded Result Set (CRITICAL)**: Flag any query that does NOT have a `LIMIT`, pagination (`setMaxResults`, `setStart`), or row-count cap. Queries joining 3+ tables without pagination can produce millions of rows and cause OOM. **This is an automatic CRITICAL severity issue — no exceptions.**
-- **Cartesian Product / JOIN Explosion**: When using LEFT JOIN, flag if the join can multiply the result set (e.g., a LEFT JOIN on a one-to-many relationship without aggregation). Especially dangerous when multiple LEFT JOINs are chained. **Quantify the explosion**: estimate the multiplication factor (e.g., "if a Coupon has 1000 CouponRedemptions, each row before this JOIN produces 1000 rows after").
-- **Large Intermediate Result Sets**: When a query joins many tables, verify that the join order and filters reduce row counts early. JOINs should be ordered so that the most restrictive filters apply first. **Produce a Row Estimation Chain** showing the estimated row count at each join step (see Section 6).
-- **Client-side Aggregation (HIGH)**: If the query returns denormalized rows and a code comment or javadoc states that the caller must aggregate (GROUP BY, SUM, COUNT, DISTINCT) in Java, this is a separate HIGH severity issue. Aggregation MUST be done in SQL. Loading millions of rows into JVM heap to aggregate in Java wastes memory, CPU, and network I/O.
-- **IS NULL OR pattern distinction**: The pattern `(col IS NULL OR col <= ?date)` is a standard nullable-date guard and is generally NOT a performance concern — do NOT flag this as an OR-clause issue. Only flag OR clauses where both branches reference different columns or use different operators that prevent a single index scan, such as `p.code = :code OR p.code LIKE :prefix || '%'`.
+| Rule | Pattern |
+|------|---------|
+| SLOW-01 | Leading Wildcards: `LIKE '%keyword'` — causes full scan |
+| SLOW-02 | Functions in WHERE on indexed columns (e.g., `WHERE YEAR(created_at) = 2023`) — prevents index usage |
+| SLOW-03 | N+1 Queries: loop executing query per iteration, or DAO returning raw `List<List<Object>>` / `List<Object[]>` that callers re-query. Flag as N+1 risk; recommend aggregating in SQL or providing a higher-level method |
+| SLOW-04 | Mismatched Data Types: string column compared with numeric value — implicit conversion ignores index |
+| SLOW-05 | **[CRITICAL]** Unbounded Result Set: no `LIMIT` / pagination (`setMaxResults`, `setStart`) / row-count cap. Queries joining 3+ tables without pagination can cause OOM — **automatic CRITICAL, no exceptions** |
+| SLOW-06 | Cartesian Product / JOIN Explosion: LEFT JOIN on 1:N without aggregation multiplies result set. **Quantify** the multiplication factor (e.g., "1000 CouponRedemptions × each row = 1000× explosion") |
+| SLOW-07 | Large Intermediate Result Sets: join order doesn't reduce rows early. Must produce a **Row Estimation Chain** (see Section 6) |
+| SLOW-08 | **[HIGH]** Client-side Aggregation: caller aggregates in Java (GROUP BY, SUM, COUNT, DISTINCT) instead of SQL. Loading millions of rows into JVM heap wastes memory, CPU, and network I/O |
+| SLOW-09 | OR-clause on different columns or mixed operators preventing single index scan. **Exception**: `(col IS NULL OR col <= ?date)` is a standard nullable-date guard — do NOT flag |
 
 ## 3. JAVA RUNTIME EXCEPTION
 
@@ -54,42 +56,42 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 ## 5. SPECIFIC RULES & PRACTICES
 
-**MANDATORY**: Cross-check EVERY query against this table. If a query touches any Table + Attribute combination listed below, you MUST produce a warning in the review output using the structured format (Section 8). No exceptions — every matched row = one issue block in the review.
+**MANDATORY**: Cross-check EVERY query against this table. If a query matches any rule below, you MUST produce a warning in the review output using the structured format (Section 8) and reference the Rule index. No exceptions — every matched rule = one issue block in the review.
 
-**To add new rules**: append a row with Table and Attribute.
+**To add new rules**: append a row with a new `SPEC-nn` index.
 
-| Table | Attribute |
-|-------|-----------|
-| any | `FORMAT(col)` / `YEAR(col)` / `LOWER(col)` in WHERE |
-| any | `CAST(col AS ...)` in WHERE |
-| any | `SUBSTRING(CONVERT(...))` in WHERE |
-| any | `col1 = ? OR col2 = ?` (different columns) |
-| any | `col = ? OR col LIKE ?%` |
-| `is32loyaltytransaction` (~50M) | any query without `transactionDate` range |
-| `is32loyaltytransaction` | `merchantCode` without `transactionDate` |
-| `is32loyaltytransaction` | `cardNumber` |
-| `is32loyaltytransaction` | `storeId` |
-| `is32loyaltytransaction` | `SELECT *` |
-| `is32loyaltytransaction` | `LEFT JOIN` without `transactionDate` |
-| `is32loyaltytransaction` | SUM/COUNT/GROUP BY/DISTINCT in Java |
-| `is32loyaltytransaction` | `LIKE '%..%'` on `description` |
-| `is32loyaltytransaction` | `cardNumber` + `transactionDate` |
-| `is32loyaltytransaction` + `is32loyaltycard` | JOIN without `transactionDate` range |
-| `is32fulfillmententry` (~20M) | `status` only (no date/orderCode) |
-| `is32fulfillmententry` | `orderCode` |
-| `is32fulfillmententry` | `customerUid` |
-| `is32fulfillmententry` | `orderCode` + `status` |
-| `is32fulfillmententry` | `warehouseCode` + `status` + `createdDate` |
-| `is32returnrequest` (~8M) | `FORMAT(createdDate)` / `YEAR(createdDate)` |
-| `is32returnrequest` | `orderCode` |
-| `is32returnrequest` | `customerUid` |
-| `is32returnrequest` | `orderCode` + `returnStatus` |
-| `is32returnrequest` | `customerUid` + `returnStatus` |
-| `is32returnrequest` + `is32fulfillmententry` | JOIN on `orderCode` without filters on both sides |
-| `is32loyaltycard` (~5M) | `customerId` |
-| `is32loyaltycard` | `LOWER(email)` / functions on `email` |
-| `is32loyaltycard` | `tierCode` + `status` |
-| `is32warehouseallocation` (~2M) | `productCode` in JOIN |
+| Rule | Description |
+|------|-------------|
+| SPEC-01 | any table — `FORMAT(col)` / `YEAR(col)` / `LOWER(col)` in WHERE |
+| SPEC-02 | any table — `CAST(col AS ...)` in WHERE |
+| SPEC-03 | any table — `SUBSTRING(CONVERT(...))` in WHERE |
+| SPEC-04 | any table — `col1 = ? OR col2 = ?` (different columns) |
+| SPEC-05 | any table — `col = ? OR col LIKE ?%` |
+| SPEC-06 | `is32loyaltytransaction` (~50M) — any query without `transactionDate` range |
+| SPEC-07 | `is32loyaltytransaction` — `merchantCode` without `transactionDate` |
+| SPEC-08 | `is32loyaltytransaction` — `cardNumber` |
+| SPEC-09 | `is32loyaltytransaction` — `storeId` |
+| SPEC-10 | `is32loyaltytransaction` — `SELECT *` |
+| SPEC-11 | `is32loyaltytransaction` — `LEFT JOIN` without `transactionDate` |
+| SPEC-12 | `is32loyaltytransaction` — SUM/COUNT/GROUP BY/DISTINCT in Java |
+| SPEC-13 | `is32loyaltytransaction` — `LIKE '%..%'` on `description` |
+| SPEC-14 | `is32loyaltytransaction` — `cardNumber` + `transactionDate` |
+| SPEC-15 | `is32loyaltytransaction` + `is32loyaltycard` — JOIN without `transactionDate` range |
+| SPEC-16 | `is32fulfillmententry` (~20M) — `status` only (no date/orderCode) |
+| SPEC-17 | `is32fulfillmententry` — `orderCode` |
+| SPEC-18 | `is32fulfillmententry` — `customerUid` |
+| SPEC-19 | `is32fulfillmententry` — `orderCode` + `status` |
+| SPEC-20 | `is32fulfillmententry` — `warehouseCode` + `status` + `createdDate` |
+| SPEC-21 | `is32returnrequest` (~8M) — `FORMAT(createdDate)` / `YEAR(createdDate)` |
+| SPEC-22 | `is32returnrequest` — `orderCode` |
+| SPEC-23 | `is32returnrequest` — `customerUid` |
+| SPEC-24 | `is32returnrequest` — `orderCode` + `returnStatus` |
+| SPEC-25 | `is32returnrequest` — `customerUid` + `returnStatus` |
+| SPEC-26 | `is32returnrequest` + `is32fulfillmententry` — JOIN on `orderCode` without filters on both sides |
+| SPEC-27 | `is32loyaltycard` (~5M) — `customerId` |
+| SPEC-28 | `is32loyaltycard` — `LOWER(email)` / functions on `email` |
+| SPEC-29 | `is32loyaltycard` — `tierCode` + `status` |
+| SPEC-30 | `is32warehouseallocation` (~2M) — `productCode` in JOIN |
 
 ## 6. MULTI-TABLE JOIN REVIEW PROTOCOL
 
@@ -150,6 +152,7 @@ To ensure reviews are actionable, every issue MUST follow this exact format. **D
 ```
 ### [SEVERITY: Critical/High/Medium] — Short title
 
+**Rule**: SLOW-xx, SPEC-xx (reference the applicable rule indexes)
 **Location**: file:line or query line reference
 **Issue**: Concrete description of what is wrong
 **Evidence**: Reference to *-items.xml index definition, code line, or query pattern
@@ -185,15 +188,15 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 1: **COMPLETE** index verification table produced — every JOIN ON column and every WHERE column listed (not just flagged ones)
 - [ ] Section 1: Composite index check performed for multi-column WHERE filters
 - [ ] Section 1: Both sides of every JOIN verified for indexes
-- [ ] Section 2: All slow patterns checked — leading wildcards, functions in WHERE, N+1, mismatched types, unbounded result set, Cartesian product, large intermediate result sets, client-side aggregation
+- [ ] Section 2: All slow patterns checked (SLOW-01 through SLOW-09)
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
-- [ ] Section 5: Every row in the Specific Rules & Practices table cross-checked against the query
+- [ ] Section 5: Every rule in the Specific Rules table cross-checked against the query (SPEC-01 through SPEC-30)
 - [ ] Section 6: Multi-table join protocol applied (if 4+ tables) — includes COMPLETE Join Analysis Table with row estimation
 - [ ] Section 6: Query decomposition strategy provided (if 8+ tables)
 - [ ] Section 6: Missing aggregation checked — Java-side GROUP BY/SUM/COUNT flagged
 - [ ] Section 7: Connection/transaction impact assessed
 - [ ] Section 7: Caching opportunities evaluated
 - [ ] Section 7: FlexibleSearch-specific checks applied (if Hybris)
-- [ ] Section 8: Every issue follows the structured output format with Location/Issue/Evidence/Impact/Fix
+- [ ] Section 8: Every issue follows the structured output format with Rule/Location/Issue/Evidence/Impact/Fix
 
