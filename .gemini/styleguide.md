@@ -54,44 +54,21 @@ Scan every Java file for concrete runtime errors (NPE, unsafe cast, Optional.get
 
 Scan every Java file for memory retention issues (static refs, unclosed resources, unbounded collections, large result sets in heap). Do NOT skip this section.
 
-## 5. SPECIFIC RULES & PRACTICES
+## 5. WATCHED TABLES
 
-**MANDATORY**: Cross-check EVERY query against this table. If a query matches any rule below, you MUST produce a warning in the review output using the structured format (Section 8) and reference the Rule index. No exceptions — every matched rule = one issue block in the review.
+**MANDATORY**: Cross-check EVERY query against this table. If a query touches any table listed below, you MUST apply extra scrutiny and produce a warning in the review output using the structured format (Section 8) with the Rule index. No exceptions.
 
-**To add new rules**: append a row with a new `SPEC-nn` index.
+**To add new rules**: append a row with a new `TABLE-nn` index.
 
-| Rule | Description |
-|------|-------------|
-| SPEC-01 | any table — `FORMAT(col)` / `YEAR(col)` / `LOWER(col)` in WHERE |
-| SPEC-02 | any table — `CAST(col AS ...)` in WHERE |
-| SPEC-03 | any table — `SUBSTRING(CONVERT(...))` in WHERE |
-| SPEC-04 | any table — `col1 = ? OR col2 = ?` (different columns) |
-| SPEC-05 | any table — `col = ? OR col LIKE ?%` |
-| SPEC-06 | `is32loyaltytransaction` (~50M) — any query without `transactionDate` range |
-| SPEC-07 | `is32loyaltytransaction` — `merchantCode` without `transactionDate` |
-| SPEC-08 | `is32loyaltytransaction` — `cardNumber` |
-| SPEC-09 | `is32loyaltytransaction` — `storeId` |
-| SPEC-10 | `is32loyaltytransaction` — `SELECT *` |
-| SPEC-11 | `is32loyaltytransaction` — `LEFT JOIN` without `transactionDate` |
-| SPEC-12 | `is32loyaltytransaction` — SUM/COUNT/GROUP BY/DISTINCT in Java |
-| SPEC-13 | `is32loyaltytransaction` — `LIKE '%..%'` on `description` |
-| SPEC-14 | `is32loyaltytransaction` — `cardNumber` + `transactionDate` |
-| SPEC-15 | `is32loyaltytransaction` + `is32loyaltycard` — JOIN without `transactionDate` range |
-| SPEC-16 | `is32fulfillmententry` (~20M) — `status` only (no date/orderCode) |
-| SPEC-17 | `is32fulfillmententry` — `orderCode` |
-| SPEC-18 | `is32fulfillmententry` — `customerUid` |
-| SPEC-19 | `is32fulfillmententry` — `orderCode` + `status` |
-| SPEC-20 | `is32fulfillmententry` — `warehouseCode` + `status` + `createdDate` |
-| SPEC-21 | `is32returnrequest` (~8M) — `FORMAT(createdDate)` / `YEAR(createdDate)` |
-| SPEC-22 | `is32returnrequest` — `orderCode` |
-| SPEC-23 | `is32returnrequest` — `customerUid` |
-| SPEC-24 | `is32returnrequest` — `orderCode` + `returnStatus` |
-| SPEC-25 | `is32returnrequest` — `customerUid` + `returnStatus` |
-| SPEC-26 | `is32returnrequest` + `is32fulfillmententry` — JOIN on `orderCode` without filters on both sides |
-| SPEC-27 | `is32loyaltycard` (~5M) — `customerId` |
-| SPEC-28 | `is32loyaltycard` — `LOWER(email)` / functions on `email` |
-| SPEC-29 | `is32loyaltycard` — `tierCode` + `status` |
-| SPEC-30 | `is32warehouseallocation` (~2M) — `productCode` in JOIN |
+| Rule | Table |
+|------|-------|
+| TABLE-01 | `is32loyaltytransaction` (~50M) |
+| TABLE-02 | `is32loyaltytransaction` + `is32loyaltycard` |
+| TABLE-03 | `is32fulfillmententry` (~20M) |
+| TABLE-04 | `is32returnrequest` (~8M) |
+| TABLE-05 | `is32returnrequest` + `is32fulfillmententry` |
+| TABLE-06 | `is32loyaltycard` (~5M) |
+| TABLE-07 | `is32warehouseallocation` (~2M) |
 
 ## 6. MULTI-TABLE JOIN REVIEW PROTOCOL
 
@@ -152,7 +129,7 @@ To ensure reviews are actionable, every issue MUST follow this exact format. **D
 ```
 ### [SEVERITY: Critical/High/Medium] — Short title
 
-**Rule**: SLOW-xx, SPEC-xx (reference the applicable rule indexes)
+**Rule**: SLOW-xx, TABLE-xx (reference the applicable rule indexes)
 **Location**: file:line or query line reference
 **Issue**: Concrete description of what is wrong
 **Evidence**: Reference to *-items.xml index definition, code line, or query pattern
@@ -191,7 +168,7 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 2: All slow patterns checked (SLOW-01 through SLOW-09)
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
-- [ ] Section 5: Every rule in the Specific Rules table cross-checked against the query (SPEC-01 through SPEC-30)
+- [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07)
 - [ ] Section 6: Multi-table join protocol applied (if 4+ tables) — includes COMPLETE Join Analysis Table with row estimation
 - [ ] Section 6: Query decomposition strategy provided (if 8+ tables)
 - [ ] Section 6: Missing aggregation checked — Java-side GROUP BY/SUM/COUNT flagged
