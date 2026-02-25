@@ -78,16 +78,71 @@ Explain why GC cannot reclaim them and how to fix it.
 
 **Important**: Do NOT skip this section even when the primary focus of the review is on query performance. Every Java file must be scanned for memory issues.
 
-## 5. Sample Slow Query Patterns
+## 5. QUERY PATTERN & INDEX REGISTRY
 
-Query patterns that cause performance issues:
+**Unified registry of all query patterns, index rules, and table constraints.** Cross-check every query against these tables during review.
 
-- `FORMAT(T.created_at, 'yyyy-MM-dd') = :d` — function on indexed column
-- `LOWER(T.email) = LOWER(:email)` — function on indexed column
-- `CAST(T.order_id AS VARCHAR(50)) = :id` — implicit type conversion
-- `SUBSTRING(CONVERT(VARCHAR(19), T.created_at, 120), 1, 10) = :d` — nested functions
-- `p.catalogVersion = :cv OR p.approvalStatus = 'APPROVED'` — OR across different columns prevents single index usage
-- `p.code = :code OR p.code LIKE :prefix || '%'` — OR with LIKE prevents index seek
+**To add new rules**: append a row to the relevant table. For patterns, set Scope to `any` for generic rules or to the specific table name for project-specific rules.
+
+### 5.1 Slow & Forbidden Query Patterns
+
+Flag any query matching these patterns. Generic patterns (`any`) apply to all tables; project-specific patterns apply only to the listed table(s).
+
+| # | Pattern (SQL snippet) | Scope | Severity | Issue | Required Fix |
+|---|---|---|---|---|---|
+| 1 | `FORMAT(col, ...) = ?` / `YEAR(col) = ?` | any | HIGH | Function on indexed column → index bypassed | Use date range: `>= ? AND < ?` |
+| 2 | `LOWER(col) = LOWER(?)` | any | HIGH | Function on indexed column → index bypassed | Use CI collation or computed column |
+| 3 | `CAST(col AS VARCHAR) = ?` | any | HIGH | Implicit type conversion → index bypassed | Match column's native data type |
+| 4 | `SUBSTRING(CONVERT(...), ...) = ?` | any | HIGH | Nested functions → index bypassed | Use range comparison |
+| 5 | `col1 = ? OR col2 = ?` (different columns) | any | MEDIUM | OR across columns → no single index | Split into UNION or restructure |
+| 6 | `col = ? OR col LIKE ?%` | any | MEDIUM | OR with LIKE → prevents index seek | Split into UNION |
+| 7 | `WHERE merchantCode = ?` (no date filter) | `is32loyaltytransaction` (50M) | CRITICAL | Low cardinality (~200 values) → ~250K rows | Add `transactionDate` range filter |
+| 8 | `JOIN LoyaltyCard ↔ LoyaltyTransaction` (no date range) | `is32loyaltycard` + `is32loyaltytransaction` | CRITICAL | 1 card × 5K+ txn → explosive join; all cards → OOM | Add `transactionDate` range |
+| 9 | `WHERE status = ?` only | `is32fulfillmententry` (20M) | HIGH | 7 values → ~2.8M rows/status; low selectivity | Add date or `orderCode` filter |
+| 10 | `FORMAT(createdDate)` / `YEAR(createdDate)` in WHERE | `is32returnrequest` (8M) | HIGH | Bypasses `returnCreatedDateIdx` (see #1) | Use `>= ?start AND < ?end` |
+| 11 | `SELECT *` | `is32loyaltytransaction` (50M) | CRITICAL | `description` LONG_STRING → massive I/O | Specify needed columns only |
+| 12 | `LEFT JOIN` (without `transactionDate` range) | `is32loyaltytransaction` (50M) | CRITICAL | Unbounded intermediate result on 50M rows | Use INNER JOIN + date filter |
+| 13 | SUM/COUNT/GROUP BY/DISTINCT in Java | `is32loyaltytransaction` | HIGH | Raw rows in JVM heap → OOM risk | Aggregate in SQL (see Section 2) |
+| 14 | `JOIN ... ON orderCode` (no filters on both sides) | `is32returnrequest` + `is32fulfillmententry` | CRITICAL | Both high-volume, no `orderCode` index → Cartesian | Add status/date filters on both sides |
+| 15 | `LIKE '%keyword%'` on `description` | `is32loyaltytransaction` (50M) | CRITICAL | LONG_STRING full scan on 50M rows | Use search index or exact match |
+
+### 5.2 High-Volume Table Registry
+
+Any query touching these tables MUST comply with the corresponding constraints:
+
+| Table | Estimated Rows | Constraint |
+|-------|---------------|------------|
+| `is32loyaltytransaction` | ~50M | MUST include `transactionDate` range filter. Unbounded queries → automatic CRITICAL. |
+| `is32fulfillmententry` | ~20M | MUST include date range OR specific `orderCode` filter. `status` alone is prohibited (7 distinct values → full scan). |
+| `is32returnrequest` | ~8M | MUST NOT join with `is32fulfillmententry` without WHERE filters on BOTH sides. Unfiltered join → ~160B rows. |
+| `is32loyaltycard` | ~5M | `customerId` filter requires index. `LOWER()` or functions on `email` bypass indexes. |
+| `is32warehouseallocation` | ~2M | `productCode` join requires index — verify before allowing. |
+
+### 5.3 Missing Index Registry
+
+Columns confirmed to lack indexes. Any query using these in WHERE or JOIN ON triggers the listed severity:
+
+| # | Table | Column | Estimated Rows | Severity |
+|---|---|---|---|---|
+| 1 | `is32loyaltytransaction` | `cardNumber` | 50M | CRITICAL |
+| 2 | `is32fulfillmententry` | `orderCode` | 20M | CRITICAL |
+| 3 | `is32returnrequest` | `orderCode` | 8M | HIGH |
+| 4 | `is32returnrequest` | `customerUid` | 8M | HIGH |
+| 5 | `is32fulfillmententry` | `customerUid` | 20M | HIGH |
+| 6 | `is32loyaltytransaction` | `storeId` | 50M | HIGH |
+
+### 5.4 Required Composite Indexes
+
+If a query uses the listed column combination without a matching composite index, flag it:
+
+| Table | Column Combination | Required Index | Reason |
+|-------|-------------------|----------------|--------|
+| `is32fulfillmententry` | `orderCode` + `status` | `fulfillOrderStatusIdx` | Most common fulfillment lookup. |
+| `is32fulfillmententry` | `warehouseCode` + `status` + `createdDate` | `fulfillWarehouseStatusDateIdx` | Warehouse pending-entry queries. |
+| `is32loyaltytransaction` | `cardNumber` + `transactionDate` | `txnCardDateIdx` | Standard txn history lookup. |
+| `is32returnrequest` | `orderCode` + `returnStatus` | `returnOrderStatusIdx` | Most common return query pattern. |
+| `is32returnrequest` | `customerUid` + `returnStatus` | `returnCustomerStatusIdx` | Customer return status queries. |
+| `is32loyaltycard` | `tierCode` + `status` | `cardTierStatusIdx` | Tier migration and reporting queries. |
 
 ## 6. MULTI-TABLE JOIN REVIEW PROTOCOL
 
@@ -186,7 +241,10 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 2: All slow patterns checked — leading wildcards, functions in WHERE, N+1, mismatched types, unbounded result set, Cartesian product, large intermediate result sets, client-side aggregation
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
-- [ ] Section 5: Query patterns cross-checked against sample slow patterns
+- [ ] Section 5: ALL patterns in 5.1 cross-checked (generic + project-specific + forbidden)
+- [ ] Section 5: High-volume table constraints checked (5.2)
+- [ ] Section 5: Missing index registry cross-checked (5.3)
+- [ ] Section 5: Composite index requirements validated (5.4)
 - [ ] Section 6: Multi-table join protocol applied (if 4+ tables) — includes COMPLETE Join Analysis Table with row estimation
 - [ ] Section 6: Query decomposition strategy provided (if 8+ tables)
 - [ ] Section 6: Missing aggregation checked — Java-side GROUP BY/SUM/COUNT flagged
@@ -194,73 +252,4 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 7: Caching opportunities evaluated
 - [ ] Section 7: FlexibleSearch-specific checks applied (if Hybris)
 - [ ] Section 8: Every issue follows the structured output format with Location/Issue/Evidence/Impact/Fix
-- [ ] Section 11: High-volume table constraints checked (11.1)
-- [ ] Section 11: Known problematic query patterns verified (11.2)
-- [ ] Section 11: Missing index registry cross-checked (11.3)
-- [ ] Section 11: Composite index requirements validated (11.4)
-- [ ] Section 11: Forbidden query patterns verified (11.5)
 
-## 11. PROJECT-SPECIFIC PERFORMANCE PRACTICES
-
-**Project-specific rules from the DBA team based on production data analysis. These extend the general rules in Sections 2, 5, and 6 with concrete table/column data. Same enforcement level.**
-
-**To add new rules**: append a row to the relevant table or a line to the pattern list below.
-
-### 11.1 High-Volume Table Registry
-
-Any query touching these tables MUST comply with the corresponding constraints:
-
-| Table | Estimated Rows | Constraint |
-|-------|---------------|------------|
-| `is32loyaltytransaction` | ~50M | MUST include `transactionDate` range filter. Unbounded queries → automatic CRITICAL. |
-| `is32fulfillmententry` | ~20M | MUST include date range OR specific `orderCode` filter. `status` alone is prohibited (7 distinct values → full scan). |
-| `is32returnrequest` | ~8M | MUST NOT join with `is32fulfillmententry` without WHERE filters on BOTH sides. Unfiltered join → ~160B rows. |
-| `is32loyaltycard` | ~5M | `customerId` filter requires index. `LOWER()` or functions on `email` bypass indexes. |
-| `is32warehouseallocation` | ~2M | `productCode` join requires index — verify before allowing. |
-
-### 11.2 Known Problematic Query Patterns
-
-Confirmed performance killers from production incidents (see Section 5 for generic pattern examples):
-
-| # | Pattern (SQL snippet) | Affected Table(s) | Severity | Root Cause | Required Fix |
-|---|---|---|---|---|---|
-| 1 | `WHERE merchantCode = ?` (no date filter) | `is32loyaltytransaction` (50M) | CRITICAL | Low cardinality (~200 values) → ~250K rows/merchant | Add `transactionDate` range filter |
-| 2 | `JOIN IS32LoyaltyCard ↔ IS32LoyaltyTransaction` (no `transactionDate` range) | `is32loyaltycard` + `is32loyaltytransaction` | CRITICAL | 1 card × 5K+ txn → explosive result; scanning 5M cards → OOM | Add `transactionDate` range in JOIN or WHERE |
-| 3 | `WHERE status = ?` only | `is32fulfillmententry` (20M) | HIGH | 7 distinct values → ~2.8M rows/status; index too low selectivity | Add date range or `orderCode` filter |
-| 4 | `FORMAT(createdDate, ...)` or `YEAR(createdDate)` in WHERE | `is32returnrequest` (8M) | HIGH | Bypasses `returnCreatedDateIdx` (see Section 5 — function on indexed column) | Use `>= ?startDate AND < ?endDate` |
-
-### 11.3 Missing Index Registry
-
-Columns confirmed to lack indexes. Any query using these in WHERE or JOIN ON triggers the listed severity:
-
-| # | Table | Column | Estimated Rows | Severity |
-|---|---|---|---|---|
-| 1 | `is32loyaltytransaction` | `cardNumber` | 50M | CRITICAL |
-| 2 | `is32fulfillmententry` | `orderCode` | 20M | CRITICAL |
-| 3 | `is32returnrequest` | `orderCode` | 8M | HIGH |
-| 4 | `is32returnrequest` | `customerUid` | 8M | HIGH |
-| 5 | `is32fulfillmententry` | `customerUid` | 20M | HIGH |
-| 6 | `is32loyaltytransaction` | `storeId` | 50M | HIGH |
-
-### 11.4 Required Composite Indexes
-
-If a query uses the listed column combination without a matching composite index, flag it:
-
-| Table | Column Combination | Required Index | Reason |
-|-------|-------------------|----------------|--------|
-| `is32fulfillmententry` | `orderCode` + `status` | `fulfillOrderStatusIdx` | Most common fulfillment lookup. Without composite, optimizer scans one column and filters the other. |
-| `is32fulfillmententry` | `warehouseCode` + `status` + `createdDate` | `fulfillWarehouseStatusDateIdx` | Warehouse pending-entry queries filter on all three. |
-| `is32loyaltytransaction` | `cardNumber` + `transactionDate` | `txnCardDateIdx` | Standard txn history lookup. Without this, each card lookup scans entire table. |
-| `is32returnrequest` | `orderCode` + `returnStatus` | `returnOrderStatusIdx` | Most common return query pattern. |
-| `is32returnrequest` | `customerUid` + `returnStatus` | `returnCustomerStatusIdx` | Customer-facing return status queries need both columns indexed together. |
-| `is32loyaltycard` | `tierCode` + `status` | `cardTierStatusIdx` | Tier migration and reporting queries filter on both columns. |
-
-### 11.5 Forbidden Query Patterns
-
-Strictly forbidden in production code — flag any occurrence (same format as Section 5):
-
-- `SELECT * FROM is32loyaltytransaction` — `description` is LONG_STRING; loading across 50M rows → massive I/O. Specify needed columns only. **CRITICAL**
-- `LEFT JOIN is32loyaltytransaction` (without `transactionDate` range) — unbounded intermediate result on 50M rows. Use INNER JOIN + date filter. **CRITICAL**
-- SUM/COUNT/GROUP BY/DISTINCT on `is32loyaltytransaction` in Java — aggregation MUST be in SQL; raw txn rows in JVM heap → OOM risk (see Section 2). **HIGH**
-- `JOIN is32returnrequest ON orderCode = is32fulfillmententry.orderCode` (without filters on both sides) — both high-volume, no `orderCode` index on either → Cartesian-like result. **CRITICAL**
-- `LIKE '%keyword%'` on `is32loyaltytransaction.description` — LONG_STRING full scan on 50M rows. Use search index or exact match. **CRITICAL**
