@@ -8,7 +8,7 @@
 2. You MUST explicitly check each item in the Completeness Checklist (Section 9) and include the filled checklist in your review output.
 3. You MUST use the structured output format (Section 7) for every issue. No free-form paragraphs.
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
-5. **ONE RULE PER REVIEW**: Each review comment MUST contain exactly ONE rule/issue. If a single code location violates multiple rules, you MUST create separate review comments for each rule. Do NOT combine multiple issues into one review comment. Grouping multiple violations into a single comment is a review failure.
+5. **ONE ISSUE PER REVIEW COMMENT — NEVER GROUP**: Each review comment MUST address exactly ONE single issue from ONE single section. NEVER merge findings from different sections into one comment (e.g., do NOT combine a SLOW-xx issue with a runtime exception or a memory issue in the same comment). NEVER list multiple issues from the same section in one comment either. If you find 5 issues, you MUST produce 5 separate review comments. Grouping is a review failure.
 
 ## 1. Detect Index Usage — Systematic Cross-Check
 
@@ -90,7 +90,7 @@ To ensure reviews are actionable, every issue MUST follow this exact format. **D
 ```
 
 **Rules**:
-- **ONE RULE PER REVIEW COMMENT**: Each review comment MUST reference exactly ONE rule/issue. If the same code location has multiple problems, create SEPARATE review comments — one for each issue. Never combine multiple issues into a single review comment.
+- **ONE ISSUE = ONE COMMENT**: Each review comment MUST contain exactly ONE issue from ONE section. Do NOT group multiple issues into a single comment, even if they are in the same file or same line. Do NOT mix findings from different sections (e.g., a SLOW-xx issue and a Section 3 runtime exception MUST be two separate comments). If a code location triggers 3 different issues, produce 3 separate review comments.
 - Do NOT produce vague warnings like "this query may be slow" without specifying which join/filter is the problem, which index is missing, and what the fix is.
 - **Impact must be quantified** where possible: estimate table sizes, row multiplication factors, or memory consumption. "Millions of rows" is better than "many rows". "500MB heap consumed loading 2M rows of 4 columns" is better than "high memory usage".
 - **Fix must include code** for Critical and High issues. A textual description alone is insufficient.
@@ -122,6 +122,5 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
 - [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07)
 - [ ] Section 6: Java coding performance scanned
-- [ ] Section 7: Every issue follows the structured output format — ONE rule per review comment
-- [ ] Verified: No review comment contains multiple rule indexes
+- [ ] Section 7: Every issue follows the structured output format — ONE issue per review comment, no cross-section grouping
 
