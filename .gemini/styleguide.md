@@ -62,13 +62,11 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 | Rule | Table |
 |------|-------|
-| TABLE-01 | `is32loyaltytransaction` (~50M) |
-| TABLE-02 | `is32loyaltytransaction` + `is32loyaltycard` |
-| TABLE-03 | `is32fulfillmententry` (~20M) |
-| TABLE-04 | `is32returnrequest` (~8M) |
-| TABLE-05 | `is32returnrequest` + `is32fulfillmententry` |
-| TABLE-06 | `is32loyaltycard` (~5M) |
-| TABLE-07 | `is32warehouseallocation` (~2M) |
+| TABLE-01 | `is32loyaltytransaction` |
+| TABLE-03 | `is32fulfillmententry`|
+| TABLE-04 | `is32returnrequest`|
+| TABLE-06 | `is32loyaltycard`|
+| TABLE-07 | `is32warehouseallocation`|
 
 ## 6. JAVA CODING PERFORMANCE
 
