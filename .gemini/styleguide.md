@@ -5,10 +5,10 @@
 **These rules are NON-NEGOTIABLE. Skipping any of them is a review failure.**
 
 1. You MUST produce a COMPLETE Index Verification Table for EVERY column in JOIN ON and WHERE clauses — not just the ones you suspect are missing indexes. A partial table is unacceptable.
-2. You MUST explicitly check each item in the Completeness Checklist (Section 10) and include the filled checklist in your review output.
-3. You MUST use the structured output format (Section 8) for every issue. No free-form paragraphs.
+2. You MUST explicitly check each item in the Completeness Checklist (Section 9) and include the filled checklist in your review output.
+3. You MUST use the structured output format (Section 7) for every issue. No free-form paragraphs.
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
-5. **ONE RULE PER REVIEW**: Each review comment MUST contain exactly ONE rule/issue. If a single code location violates multiple rules, you MUST create separate review comments for each rule. Do NOT combine multiple rules (e.g., SLOW-01 + PERF-03) into one review comment. Grouping multiple violations into a single comment is a review failure.
+5. **ONE RULE PER REVIEW**: Each review comment MUST contain exactly ONE rule/issue. If a single code location violates multiple rules, you MUST create separate review comments for each rule. Do NOT combine multiple issues into one review comment. Grouping multiple violations into a single comment is a review failure.
 
 ## 1. Detect Index Usage — Systematic Cross-Check
 
@@ -56,7 +56,7 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 ## 5. WATCHED TABLES
 
-**MANDATORY**: Cross-check EVERY query against this table. If a query touches any table listed below, you MUST apply extra scrutiny and produce a warning in the review output using the structured format (Section 8) with the Rule index. No exceptions.
+**MANDATORY**: Cross-check EVERY query against this table. If a query touches any table listed below, you MUST apply extra scrutiny and produce a warning in the review output using the structured format (Section 7) with the Rule index. No exceptions.
 
 **To add new rules**: append a row with a new `TABLE-nn` index.
 
@@ -70,44 +70,18 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 | TABLE-06 | `is32loyaltycard` (~5M) |
 | TABLE-07 | `is32warehouseallocation` (~2M) |
 
-## 6. JAVA PERFORMANCE ANTI-PATTERNS
+## 6. JAVA CODING PERFORMANCE
 
-Flag the following patterns as performance concerns. When flagging, reference the Rule index (e.g., `PERF-01`). Do NOT skip this section.
+Scan every Java file for any coding patterns that negatively impact performance (CPU, memory, I/O, concurrency, thread safety). Do NOT skip this section.
 
-| Rule | Pattern |
-|------|---------|
-| PERF-01 | String concatenation in loops instead of StringBuilder |
-| PERF-02 | Unnecessary autoboxing/unboxing in hot paths or tight loops |
-| PERF-03 | Inefficient collection choice for the access pattern used |
-| PERF-04 | Object creation inside loops when reuse or pooling is possible |
-| PERF-05 | Regex Pattern compiled inside loops or frequently called methods |
-| PERF-06 | Inefficient Stream API usage where simple loops would perform better |
-| PERF-07 | Redundant or repeated method calls that could be computed once |
-| PERF-08 | Inefficient Map operations (e.g., containsKey + get instead of getOrDefault / putIfAbsent / computeIfAbsent) |
-| PERF-09 | Unnecessary copying of collections or arrays |
-| PERF-10 | Excessive synchronized blocks or lock contention in hot paths |
-
-## 7. CONCURRENCY & THREAD SAFETY
-
-Scan every Java file for concurrency issues and thread safety violations. Do NOT skip this section.
-
-| Rule | Pattern |
-|------|---------|
-| CONC-01 | Shared mutable state without proper synchronization |
-| CONC-02 | Non-thread-safe classes used in concurrent context (e.g., SimpleDateFormat, HashMap, ArrayList shared across threads) |
-| CONC-03 | Double-checked locking without volatile |
-| CONC-04 | Synchronization on non-final fields or mutable references |
-| CONC-05 | Race conditions in check-then-act sequences |
-| CONC-06 | Potential deadlock from inconsistent lock ordering |
-
-## 8. REVIEW OUTPUT FORMAT
+## 7. REVIEW OUTPUT FORMAT
 
 To ensure reviews are actionable, every issue MUST follow this exact format. **Do NOT use free-form paragraphs.** Every issue gets its own block:
 
 ```
 ### [SEVERITY: Critical/High/Medium] — Short title
 
-**Rule**: ONE single rule index (e.g., SLOW-01 or PERF-03 or CONC-02)
+**Rule**: ONE single rule index (e.g., SLOW-01 or TABLE-03)
 **Location**: file:line or query line reference
 **Issue**: Concrete description of what is wrong
 **Evidence**: Reference to *-items.xml index definition, code line, or query pattern
@@ -116,12 +90,12 @@ To ensure reviews are actionable, every issue MUST follow this exact format. **D
 ```
 
 **Rules**:
-- **ONE RULE PER REVIEW COMMENT**: Each review comment MUST reference exactly ONE rule. If the same code location violates multiple rules (e.g., SLOW-05 and PERF-04), create SEPARATE review comments — one for each rule. Never combine multiple rule indexes in a single review comment.
+- **ONE RULE PER REVIEW COMMENT**: Each review comment MUST reference exactly ONE rule/issue. If the same code location has multiple problems, create SEPARATE review comments — one for each issue. Never combine multiple issues into a single review comment.
 - Do NOT produce vague warnings like "this query may be slow" without specifying which join/filter is the problem, which index is missing, and what the fix is.
 - **Impact must be quantified** where possible: estimate table sizes, row multiplication factors, or memory consumption. "Millions of rows" is better than "many rows". "500MB heap consumed loading 2M rows of 4 columns" is better than "high memory usage".
 - **Fix must include code** for Critical and High issues. A textual description alone is insufficient.
 
-## 9. SEVERITY CLASSIFICATION GUIDE
+## 8. SEVERITY CLASSIFICATION GUIDE
 
 Use the following to determine severity. Do not downgrade severity for convenience.
 
@@ -134,7 +108,7 @@ Use the following to determine severity. Do not downgrade severity for convenien
 
 **Escalation rule**: If an issue combines two categories (e.g., unbounded result set + client-side aggregation), use the HIGHER severity.
 
-## 10. REVIEW COMPLETENESS CHECKLIST
+## 9. REVIEW COMPLETENESS CHECKLIST
 
 **MANDATORY**: You MUST include this filled checklist at the END of your review. Mark each item with [x] when completed. A review missing this checklist or with unchecked mandatory items will be considered incomplete.
 
@@ -147,8 +121,7 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
 - [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07)
-- [ ] Section 6: Java performance anti-patterns checked (PERF-01 through PERF-10)
-- [ ] Section 7: Concurrency & thread safety issues scanned (CONC-01 through CONC-06)
-- [ ] Section 8: Every issue follows the structured output format — ONE rule per review comment
+- [ ] Section 6: Java coding performance scanned
+- [ ] Section 7: Every issue follows the structured output format — ONE rule per review comment
 - [ ] Verified: No review comment contains multiple rule indexes
 
