@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcarne Tactics - Auto Chess</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Top Bar: Player Info -->
+        <header id="top-bar">
+            <div class="player-info">
+                <span id="player-hp-bar">
+                    <span id="player-hp-fill"></span>
+                    <span id="player-hp-text">HP: 100</span>
+                </span>
+                <span id="player-level">Lv. 1</span>
+                <span id="player-gold" title="Vàng">
+                    <span class="gold-icon">&#9733;</span>
+                    <span id="gold-amount">5</span>
+                </span>
+                <span id="round-info">Vòng 1</span>
+            </div>
+            <div class="game-actions">
+                <button id="btn-buy-xp" title="Mua 4 XP với 4 vàng">Mua XP (4&#9733;)</button>
+                <button id="btn-refresh" title="Làm mới cửa hàng với 2 vàng">Làm mới (2&#9733;)</button>
+                <button id="btn-start-battle" title="Bắt đầu trận đấu">&#9876; Chiến đấu</button>
+            </div>
+        </header>
+
+        <!-- Active Synergies Panel -->
+        <aside id="synergy-panel">
+            <h3>Hiệp Lực</h3>
+            <div id="synergy-list"></div>
+        </aside>
+
+        <!-- Game Board -->
+        <main id="game-area">
+            <!-- Opponent Board -->
+            <div id="opponent-board" class="board">
+                <div class="board-label">Đối thủ</div>
+            </div>
+
+            <!-- Player Board -->
+            <div id="player-board" class="board">
+                <div class="board-label">Sân của bạn</div>
+            </div>
+
+            <!-- Bench -->
+            <div id="bench">
+                <div class="bench-label">Ghế dự bị</div>
+                <div id="bench-slots"></div>
+            </div>
+        </main>
+
+        <!-- Shop -->
+        <footer id="shop">
+            <h3>Cửa Hàng</h3>
+            <div id="shop-cards"></div>
+        </footer>
+
+        <!-- Battle Log / Info Panel -->
+        <div id="info-panel">
+            <div id="battle-log"></div>
+        </div>
+
+        <!-- Item Inventory -->
+        <aside id="item-panel">
+            <h3>Trang Bị</h3>
+            <div id="item-list"></div>
+        </aside>
+
+        <!-- Augment Selection Modal -->
+        <div id="augment-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Chọn Tăng Cường</h2>
+                <p>Chọn một hiệu ứng đặc biệt cho trận đấu</p>
+                <div id="augment-choices"></div>
+            </div>
+        </div>
+
+        <!-- Battle Result Modal -->
+        <div id="result-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="result-title"></h2>
+                <p id="result-detail"></p>
+                <button id="btn-continue">Tiếp tục</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game-data.js"></script>
+    <script src="game-engine.js"></script>
+    <script src="ui.js"></script>
+</body>
+</html>

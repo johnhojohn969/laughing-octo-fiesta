@@ -1,0 +1,1016 @@
+/* ============================================
+   ARCARNE TACTICS - AUTO CHESS
+   Card-first design: full-image cards with border only
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+:root {
+    --bg-dark: #0a0e17;
+    --bg-panel: #111827;
+    --bg-board: #1a2332;
+    --border-card: #2d3748;
+    --gold: #f6c744;
+    --gold-dark: #d4a017;
+    --hp-green: #22c55e;
+    --hp-red: #ef4444;
+    --mana-blue: #3b82f6;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --accent-purple: #8b5cf6;
+    --accent-cyan: #06b6d4;
+
+    /* Rarity colors */
+    --rarity-common: #9ca3af;
+    --rarity-uncommon: #22c55e;
+    --rarity-rare: #3b82f6;
+    --rarity-epic: #a855f7;
+    --rarity-legendary: #f59e0b;
+
+    /* Synergy colors */
+    --syn-warrior: #dc2626;
+    --syn-mage: #7c3aed;
+    --syn-ranger: #16a34a;
+    --syn-assassin: #be185d;
+    --syn-tank: #d97706;
+    --syn-support: #0891b2;
+    --syn-dragon: #ea580c;
+    --syn-undead: #6b7280;
+    --syn-elemental: #2563eb;
+    --syn-beast: #65a30d;
+
+    --card-width: 80px;
+    --card-height: 100px;
+    --card-border: 3px;
+    --card-radius: 8px;
+    --cell-size: 72px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+#game-container {
+    display: grid;
+    grid-template-columns: 200px 1fr 180px;
+    grid-template-rows: auto 1fr auto auto;
+    grid-template-areas:
+        "header header header"
+        "synergy board items"
+        "synergy bench items"
+        "shop shop shop";
+    min-height: 100vh;
+    gap: 4px;
+}
+
+/* ===================== TOP BAR ===================== */
+#top-bar {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-card);
+}
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#player-hp-bar {
+    position: relative;
+    width: 180px;
+    height: 28px;
+    background: #1e293b;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid #334155;
+}
+
+#player-hp-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--hp-green), #4ade80);
+    transition: width 0.5s ease;
+    border-radius: 14px;
+}
+
+#player-hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    z-index: 1;
+}
+
+#player-level {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent-cyan);
+}
+
+#player-gold {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.gold-icon {
+    color: var(--gold);
+    font-size: 18px;
+}
+
+#round-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.game-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.game-actions button {
+    padding: 6px 14px;
+    border: 1px solid var(--border-card);
+    border-radius: 6px;
+    background: var(--bg-board);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.game-actions button:hover {
+    background: #2d3748;
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+#btn-start-battle {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    border-color: #ef4444;
+    color: white;
+}
+
+#btn-start-battle:hover {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 0 12px rgba(239,68,68,0.4);
+}
+
+/* ===================== SYNERGY PANEL ===================== */
+#synergy-panel {
+    grid-area: synergy;
+    background: var(--bg-panel);
+    padding: 12px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-card);
+}
+
+#synergy-panel h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.synergy-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    font-size: 12px;
+}
+
+.synergy-item.active {
+    background: rgba(255,255,255,0.08);
+    border-left: 3px solid var(--gold);
+}
+
+.synergy-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.synergy-count {
+    font-weight: 700;
+    color: var(--gold);
+}
+
+.synergy-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.synergy-bonus {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* ===================== GAME BOARD ===================== */
+#game-area {
+    grid-area: board;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    gap: 8px;
+}
+
+.board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, var(--cell-size));
+    grid-template-rows: repeat(3, var(--cell-size));
+    gap: 3px;
+    padding: 8px;
+    background: var(--bg-board);
+    border-radius: 10px;
+    border: 1px solid var(--border-card);
+}
+
+.board-label {
+    position: absolute;
+    top: -20px;
+    left: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.board-cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.board-cell:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+}
+
+.board-cell.highlight {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: var(--hp-green);
+}
+
+.board-cell.occupied {
+    background: rgba(139, 92, 246, 0.08);
+}
+
+/* Zone indicators for positioning strategy */
+.board-cell[data-zone="front"]::before {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 2px;
+    background: rgba(239, 68, 68, 0.3);
+    border-radius: 1px;
+}
+
+.board-cell[data-zone="back"]::before {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 2px;
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 1px;
+}
+
+/* ===================== CARD DESIGN - FULL IMAGE ===================== */
+/*
+ * Card philosophy: Image fills the ENTIRE card surface
+ * Only a styled border frames the card
+ * Info overlays float on top of the image
+ */
+
+.card {
+    width: var(--card-width);
+    height: var(--card-height);
+    border-radius: var(--card-radius);
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
+}
+
+.card:hover {
+    transform: translateY(-4px) scale(1.05);
+    z-index: 10;
+}
+
+.card:active {
+    cursor: grabbing;
+}
+
+/* Rarity border - THE ONLY non-image element */
+.card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--card-radius);
+    border: var(--card-border) solid var(--rarity-common);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.card[data-rarity="common"]::before { border-color: var(--rarity-common); }
+.card[data-rarity="uncommon"]::before { border-color: var(--rarity-uncommon); }
+.card[data-rarity="rare"]::before { border-color: var(--rarity-rare); }
+.card[data-rarity="epic"]::before { border-color: var(--rarity-epic); }
+.card[data-rarity="legendary"]::before {
+    border-color: var(--rarity-legendary);
+    box-shadow: inset 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Full-bleed image */
+.card-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+/* Gradient overlay at bottom for readability */
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 45%;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Card info floating on image */
+.card-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 6px;
+    z-index: 2;
+}
+
+.card-name {
+    font-size: 9px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-cost {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.7);
+    border: 1.5px solid var(--gold);
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* Star level indicator */
+.card-stars {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 2;
+    display: flex;
+    gap: 1px;
+}
+
+.card-stars .star {
+    font-size: 8px;
+    color: var(--gold);
+    text-shadow: 0 0 4px rgba(246, 199, 68, 0.8);
+}
+
+/* Synergy badges on card */
+.card-synergies {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+}
+
+.card-synergy-badge {
+    font-size: 7px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+}
+
+/* HP/Mana bars on board cards */
+.card-bars {
+    position: absolute;
+    bottom: 0;
+    left: var(--card-border);
+    right: var(--card-border);
+    height: 4px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.card-hp-bar, .card-mana-bar {
+    height: 2px;
+    border-radius: 1px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.5);
+}
+
+.card-hp-bar .fill {
+    height: 100%;
+    background: var(--hp-green);
+    transition: width 0.3s ease;
+}
+
+.card-mana-bar .fill {
+    height: 100%;
+    background: var(--mana-blue);
+    transition: width 0.3s ease;
+}
+
+/* Card in board cell - slightly smaller */
+.board-cell .card {
+    width: 62px;
+    height: 72px;
+    --card-width: 62px;
+    --card-height: 72px;
+}
+
+/* Card upgrade animation */
+.card.upgrading {
+    animation: cardUpgrade 0.6s ease;
+}
+
+@keyframes cardUpgrade {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.3); filter: brightness(2) saturate(2); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Card damage flash */
+.card.damaged {
+    animation: damageFlash 0.3s ease;
+}
+
+@keyframes damageFlash {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(0.5) sepia(1) hue-rotate(-30deg); }
+}
+
+/* Card attacking */
+.card.attacking {
+    animation: attackBounce 0.4s ease;
+}
+
+@keyframes attackBounce {
+    0% { transform: translate(0, 0); }
+    30% { transform: translate(0, -8px); }
+    60% { transform: translate(0, 4px); }
+    100% { transform: translate(0, 0); }
+}
+
+/* ===================== BENCH ===================== */
+#bench {
+    grid-area: bench;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+}
+
+.bench-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+#bench-slots {
+    display: flex;
+    gap: 6px;
+}
+
+.bench-slot {
+    width: var(--card-width);
+    height: var(--card-height);
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255,255,255,0.1);
+    border-radius: var(--card-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bench-slot.highlight {
+    border-color: var(--hp-green);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+/* ===================== SHOP ===================== */
+#shop {
+    grid-area: shop;
+    background: var(--bg-panel);
+    padding: 10px 16px;
+    border-top: 1px solid var(--border-card);
+}
+
+#shop h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+#shop-cards {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* Shop card is larger for better viewing */
+.shop-card {
+    width: 120px;
+    height: 150px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    --card-border: 3px;
+}
+
+.shop-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.shop-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    border: 3px solid var(--rarity-common);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.shop-card[data-rarity="common"]::before { border-color: var(--rarity-common); }
+.shop-card[data-rarity="uncommon"]::before { border-color: var(--rarity-uncommon); }
+.shop-card[data-rarity="rare"]::before { border-color: var(--rarity-rare); }
+.shop-card[data-rarity="epic"]::before { border-color: var(--rarity-epic); }
+.shop-card[data-rarity="legendary"]::before {
+    border-color: var(--rarity-legendary);
+    box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.shop-card .card-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.shop-card .card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.shop-card .card-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    z-index: 2;
+}
+
+.shop-card .card-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+}
+
+.shop-card .card-cost {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+}
+
+.shop-card .card-synergies {
+    margin-top: 4px;
+}
+
+.shop-card .card-synergy-badge {
+    font-size: 9px;
+    padding: 2px 5px;
+}
+
+.shop-card .shop-stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 3px;
+    font-size: 9px;
+    color: rgba(255,255,255,0.7);
+}
+
+.shop-card .shop-stats span {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.shop-card.sold {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* ===================== ITEM PANEL ===================== */
+#item-panel {
+    grid-area: items;
+    background: var(--bg-panel);
+    padding: 12px;
+    overflow-y: auto;
+    border-left: 1px solid var(--border-card);
+}
+
+#item-panel h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.item-slot {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    border: 2px solid var(--border-card);
+    background: rgba(255,255,255,0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    margin-bottom: 6px;
+    font-size: 20px;
+    transition: all 0.15s ease;
+}
+
+.item-slot:hover {
+    border-color: var(--gold);
+    background: rgba(255,255,255,0.08);
+}
+
+.item-tooltip {
+    position: absolute;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-card);
+    border-radius: 8px;
+    padding: 10px;
+    z-index: 100;
+    min-width: 180px;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.item-tooltip h4 {
+    font-size: 12px;
+    color: var(--gold);
+    margin-bottom: 4px;
+}
+
+.item-tooltip p {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+/* ===================== INFO PANEL ===================== */
+#info-panel {
+    display: none; /* Hidden by default, shown during battle */
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    width: 250px;
+    max-height: 200px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-card);
+    border-radius: 10px;
+    padding: 10px;
+    overflow-y: auto;
+    z-index: 50;
+}
+
+#info-panel.visible {
+    display: block;
+}
+
+#battle-log {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.log-damage { color: var(--hp-red); }
+.log-heal { color: var(--hp-green); }
+.log-ability { color: var(--accent-purple); }
+.log-death { color: #ef4444; font-weight: 600; }
+
+/* ===================== MODALS ===================== */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+}
+
+.modal.hidden { display: none; }
+
+.modal-content {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-card);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    max-width: 600px;
+    width: 90%;
+}
+
+.modal-content h2 {
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.modal-content p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+#augment-choices {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.augment-card {
+    width: 160px;
+    background: var(--bg-board);
+    border: 2px solid var(--border-card);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.augment-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.augment-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.augment-name {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.augment-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+#btn-continue {
+    padding: 10px 32px;
+    background: linear-gradient(135deg, var(--accent-purple), #6d28d9);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+#btn-continue:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+}
+
+/* ===================== DRAG & DROP ===================== */
+.dragging {
+    opacity: 0.5;
+    transform: scale(0.9) !important;
+}
+
+.drag-over {
+    background: rgba(139, 92, 246, 0.15) !important;
+    border-color: var(--accent-purple) !important;
+}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 900px) {
+    #game-container {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "header"
+            "synergy"
+            "board"
+            "bench"
+            "items"
+            "shop";
+    }
+
+    #synergy-panel, #item-panel {
+        border: none;
+        border-bottom: 1px solid var(--border-card);
+    }
+
+    #synergy-panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    #synergy-panel h3 {
+        width: 100%;
+    }
+
+    .board {
+        --cell-size: 52px;
+    }
+
+    .board-cell .card {
+        width: 44px;
+        height: 54px;
+    }
+
+    .shop-card {
+        width: 90px;
+        height: 112px;
+    }
+}
+
+/* ===================== UTILITY ===================== */
+.hidden { display: none !important; }
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tooltip for card details on hover */
+.card-tooltip {
+    position: fixed;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-card);
+    border-radius: 10px;
+    padding: 12px;
+    z-index: 300;
+    min-width: 200px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+    pointer-events: none;
+}
+
+.card-tooltip .tt-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.card-tooltip .tt-synergies {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.card-tooltip .tt-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.card-tooltip .tt-ability {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-card);
+    font-size: 11px;
+}
+
+.card-tooltip .tt-ability-name {
+    color: var(--accent-cyan);
+    font-weight: 700;
+}
+
+.card-tooltip .tt-ability-desc {
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
