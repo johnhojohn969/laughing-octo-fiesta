@@ -70,30 +70,15 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 ### 5.1 FLEXIBLESEARCH QUERY PATTERN DETECTION
 
-**MANDATORY**: When reviewing Java code that contains FlexibleSearch queries (strings passed to `flexibleSearchService.search()`, `FlexibleSearchQuery`, or any query string that uses Hybris FlexibleSearch syntax like `SELECT ... FROM {TypeName}` or `{p:attribute}`), you MUST cross-check against the patterns below. If a FlexibleSearch query matches or resembles any of these patterns, flag it using the corresponding `FSQL-nn` rule index.
+**MANDATORY**: When reviewing Java code that contains FlexibleSearch queries (strings passed to `flexibleSearchService.search()`, `FlexibleSearchQuery`, or any query string that uses Hybris FlexibleSearch syntax like `SELECT ... FROM {TypeName}` or `{p:attribute}`), you MUST cross-check against the patterns below. If a FlexibleSearch query structurally matches or resembles any of these patterns, flag it using the corresponding `SQL-nn` rule index.
 
-FlexibleSearch queries are Hybris-specific SQL-like queries that typically use curly braces `{TypeName}` for types and `{p:attribute}` or `{t.attribute}` for columns, but developers sometimes also write them using raw table names (e.g., `is32promotion`, `customerreviews`, `crmaccount`) directly. You MUST detect BOTH styles.
+**To add new rules**: append a row with a new `SQL-nn` index.
 
-**To add new rules**: append a row with a new `FSQL-nn` index.
-
-| Rule | Pattern | Severity |
-|------|---------|----------|
-| FSQL-01 | Query with nested subquery using EXISTS / NOT EXISTS / SELECT COUNT inside WHERE clause — similar to the reference query below. These cause correlated subquery execution per-row and degrade quickly on large tables | HIGH |
-| FSQL-02 | Query using aggregate functions (avg, sum, count, min, max) without proper pagination or result size bounding | MEDIUM |
-| FSQL-03 | Query using SELECT * or selecting all columns with an IN clause containing a large or dynamic number of parameters (?,?,...,?) | HIGH |
-| FSQL-04 | Query joining 2+ tables with multiple WHERE conditions but missing composite index coverage — check all filter columns | HIGH |
-| FSQL-05 | Query that combines JOIN with correlated subqueries (EXISTS, NOT EXISTS, or scalar subselect in WHERE) on the same parent table | CRITICAL |
-
-**Reference queries** — these are actual production SQL patterns. If you see FlexibleSearch queries that structurally match any of these, flag them:
-
-**FSQL-REF-01** (matches FSQL-01, FSQL-04, FSQL-05):
-SELECT item_t0.PK FROM is32promotion item_t0 JOIN is32bucket item_t1 ON item_t1.p_promotionuid = item_t0.p_uid WHERE ( item_t0.p_redeemdigitalcoupon IS NOT NULL AND item_t0.p_requiredcoupon = '***' AND item_t1.p_participateinreward = '***' AND (SELECT COUNT('***') FROM is32bucket item_t2 WHERE ( item_t2.p_promotionuid = item_t0.p_uid ) AND (item_t2.TypePkString=? )) = '***' AND EXISTS( SELECT '***' FROM is32threshold item_t3 WHERE ( item_t3.p_promotionuid = item_t0.p_uid AND item_t3.p_thresholdtype = ?) AND (item_t3.TypePkString=? )) AND NOT EXISTS( SELECT '***' FROM is32promoexcludeitem item_t4 WHERE ( item_t4.p_itemcode = ? and item_t4.p_bucketuid = item_t1.uniqueid ) AND (item_t4.TypePkString=? )) AND item_t0.p_status = '***' AND item_t0.p_suspended = '***' AND item_t0.p_startdate <= ? AND item_t0.p_enddate >= ? AND item_t0.p_basestore = ?) AND ((item_t0.TypePkString=? AND item_t1.TypePkString=? ))
-
-**FSQL-REF-02** (matches FSQL-02):
-SELECT avg( item_t0.p_rating ) FROM customerreviews item_t0 WHERE ( item_t0.p_product = ?) AND (item_t0.TypePkString=? AND ( item_t0.p_blocked = '***' OR item_t0.p_blocked IS NULL)AND ( item_t0.p_approvalstatus !='***'))
-
-**FSQL-REF-03** (matches FSQL-03):
-SELECT * FROM crmaccount WHERE PK IN (?,?,..., ?)
+| Rule | Pattern |
+|------|---------|
+| SQL-01 | SELECT item_t0.PK FROM is32promotion item_t0 JOIN is32bucket item_t1 ON item_t1.p_promotionuid = item_t0.p_uid WHERE ( item_t0.p_redeemdigitalcoupon IS NOT NULL AND item_t0.p_requiredcoupon = '' AND item_t1.p_participateinreward = '' AND (SELECT COUNT('') FROM is32bucket item_t2 WHERE ( item_t2.p_promotionuid = item_t0.p_uid ) AND (item_t2.TypePkString=? )) = '' AND EXISTS( SELECT '' FROM is32threshold item_t3 WHERE ( item_t3.p_promotionuid = item_t0.p_uid AND item_t3.p_thresholdtype = ?) AND (item_t3.TypePkString=? )) AND NOT EXISTS( SELECT '' FROM is32promoexcludeitem item_t4 WHERE ( item_t4.p_itemcode = ? and item_t4.p_bucketuid = item_t1.uniqueid ) AND (item_t4.TypePkString=? )) AND item_t0.p_status = '' AND item_t0.p_suspended = '' AND item_t0.p_startdate <= ? AND item_t0.p_enddate >= ? AND item_t0.p_basestore = ?) AND ((item_t0.TypePkString=? AND item_t1.TypePkString=? )) |
+| SQL-02 | SELECT avg( item_t0.p_rating ) FROM customerreviews item_t0 WHERE ( item_t0.p_product = ?) AND (item_t0.TypePkString=? AND ( item_t0.p_blocked = '' OR item_t0.p_blocked IS NULL)AND ( item_t0.p_approvalstatus !=''))|
+| SQL-03 | SELECT * FROM crmaccount WHERE PK IN (?,?,..., ?)|
 
 ## 6. JAVA CODING PERFORMANCE
 
@@ -145,7 +130,7 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 2: All slow patterns checked (SLOW-01 through SLOW-09)
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
-- [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07)
+- [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07) and FlexibleSearch patterns cross-checked (SQL-01 through SQL-03)
 - [ ] Section 6: Java coding performance scanned
 - [ ] Section 7: Every issue follows the structured output format — ONE issue per review comment, no cross-section grouping
 

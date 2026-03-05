@@ -13,20 +13,20 @@ public class DefaultIS32CustomerReviewDao
 {
     private static final Logger LOG = Logger.getLogger(DefaultIS32CustomerReviewDao.class);
 
-    // FSQL-02 violation: aggregate function (avg) without pagination or result bounding
+    // SQL-02 violation: aggregate function (avg) without pagination or result bounding
     private static final String GET_AVERAGE_RATING =
             "SELECT avg({cr.rating}) FROM {CustomerReview AS cr} " +
             "WHERE {cr.product} = ?product " +
             "AND ({cr.blocked} = ?blocked OR {cr.blocked} IS NULL) " +
             "AND {cr.approvalStatus} != ?rejectedStatus";
 
-    // FSQL-02 violation: another aggregate (COUNT) without bounding
+    // SQL-02 violation: another aggregate (COUNT) without bounding
     private static final String COUNT_REVIEWS_BY_PRODUCT =
             "SELECT COUNT({cr.pk}) FROM {CustomerReview AS cr} " +
             "WHERE {cr.product} = ?product " +
             "AND {cr.approvalStatus} = ?approvedStatus";
 
-    // FSQL-02 violation: SUM aggregate without pagination
+    // SQL-02 violation: SUM aggregate without pagination
     private static final String SUM_RATINGS_BY_STORE =
             "SELECT SUM({cr.rating}) FROM {CustomerReview AS cr JOIN BaseStore AS bs ON {cr.baseStore} = {bs.pk}} " +
             "WHERE {bs.uid} = ?storeUid " +

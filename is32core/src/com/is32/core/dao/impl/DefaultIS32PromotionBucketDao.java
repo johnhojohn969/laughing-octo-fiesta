@@ -15,7 +15,7 @@ public class DefaultIS32PromotionBucketDao
 {
     private static final Logger LOG = Logger.getLogger(DefaultIS32PromotionBucketDao.class);
 
-    // FSQL-01, FSQL-04, FSQL-05 violation: nested subqueries with EXISTS/NOT EXISTS/COUNT + multi-table JOIN
+    // SQL-01 violation: nested subqueries with EXISTS/NOT EXISTS/COUNT + multi-table JOIN
     private static final String FIND_ELIGIBLE_PROMOTIONS =
             "SELECT {p.pk} FROM {IS32Promotion AS p JOIN IS32Bucket AS b ON {b.promotionUid} = {p.uid}} " +
             "WHERE {p.redeemDigitalCoupon} IS NOT NULL " +

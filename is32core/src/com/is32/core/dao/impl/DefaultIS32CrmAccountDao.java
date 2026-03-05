@@ -14,17 +14,17 @@ public class DefaultIS32CrmAccountDao
 {
     private static final Logger LOG = Logger.getLogger(DefaultIS32CrmAccountDao.class);
 
-    // FSQL-03 violation: SELECT * with dynamic IN clause
+    // SQL-03 violation: SELECT * with dynamic IN clause
     private static final String FIND_ACCOUNTS_BY_PKS =
             "SELECT * FROM {CrmAccount} WHERE {pk} IN (?pkList)";
 
-    // FSQL-03 violation: SELECT all fields with large IN clause
+    // SQL-03 violation: SELECT all fields with large IN clause
     private static final String FIND_ACCOUNTS_BY_CODES =
             "SELECT {pk}, {code}, {name}, {email}, {phone}, {address}, {city}, {state}, {country}, {postalCode}, " +
             "{createdDate}, {modifiedDate}, {status}, {accountType}, {parentAccount} " +
             "FROM {CrmAccount} WHERE {code} IN (?codeList)";
 
-    // FSQL-01, FSQL-05 violation: JOIN + EXISTS subquery combined
+    // SQL-01 violation: JOIN + EXISTS subquery combined
     private static final String FIND_ACCOUNTS_WITH_ORDERS =
             "SELECT {a.pk} FROM {CrmAccount AS a JOIN Order AS o ON {o.account} = {a.pk}} " +
             "WHERE {a.status} = ?activeStatus " +
