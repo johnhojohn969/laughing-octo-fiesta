@@ -445,5 +445,376 @@
             </attributes>
         </itemtype>
 
+        <!-- IS32 Store Inventory - used by DefaultIS32StoreInventoryDao -->
+        <itemtype code="IS32StoreInventory" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32StoreInventory">
+            <deployment table="is32storeinventory" typecode="25008"/>
+            <attributes>
+                <attribute qualifier="warehouse" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="stockLevel" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="discontinued" type="java.lang.Boolean">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <defaultvalue>java.lang.Boolean.FALSE</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="productStatus" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="warehouseIdx">
+                    <key attribute="warehouse"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Product Price - used by DefaultIS32StoreInventoryDao -->
+        <itemtype code="IS32ProductPrice" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32ProductPrice">
+            <deployment table="is32productprice" typecode="25009"/>
+            <attributes>
+                <attribute qualifier="price" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="category" type="Category">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="currency" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="validUntil" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="categoryIdx">
+                    <key attribute="category"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Threshold - used by DefaultIS32PromotionBucketDao -->
+        <itemtype code="IS32Threshold" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32Threshold">
+            <deployment table="is32threshold" typecode="25010"/>
+            <attributes>
+                <attribute qualifier="promotionUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="thresholdType" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="thresholdPromoUidIdx">
+                    <key attribute="promotionUid"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Promo Exclude Item - used by DefaultIS32PromotionBucketDao -->
+        <itemtype code="IS32PromoExcludeItem" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32PromoExcludeItem">
+            <deployment table="is32promoexcludeitem" typecode="25011"/>
+            <attributes>
+                <attribute qualifier="itemCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="bucketUid" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="excludeItemCodeIdx">
+                    <key attribute="itemCode"/>
+                </index>
+                <index name="excludeBucketUidIdx">
+                    <key attribute="bucketUid"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Voucher - used by DefaultIS32VoucherRedemptionDao -->
+        <itemtype code="IS32Voucher" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32Voucher">
+            <deployment table="is32voucher" typecode="25012"/>
+            <attributes>
+                <attribute qualifier="code" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="enabled" type="java.lang.Boolean">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <defaultvalue>java.lang.Boolean.TRUE</defaultvalue>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="maxRedemptions" type="java.lang.Integer">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="validFrom" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="validTo" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="storeGroup" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="campaignId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="voucherCodeIdx" unique="true">
+                    <key attribute="code"/>
+                </index>
+                <index name="campaignIdIdx">
+                    <key attribute="campaignId"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Voucher Pool - used by DefaultIS32VoucherRedemptionDao -->
+        <itemtype code="IS32VoucherPool" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32VoucherPool">
+            <deployment table="is32voucherpool" typecode="25013"/>
+            <attributes>
+                <attribute qualifier="voucherCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="channel" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="poolVoucherCodeIdx">
+                    <key attribute="voucherCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Voucher Allocation - used by DefaultIS32VoucherRedemptionDao -->
+        <itemtype code="IS32VoucherAllocation" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32VoucherAllocation">
+            <deployment table="is32voucherallocation" typecode="25014"/>
+            <attributes>
+                <attribute qualifier="voucherCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="allocVoucherCodeIdx">
+                    <key attribute="voucherCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Voucher Condition - used by DefaultIS32VoucherRedemptionDao -->
+        <itemtype code="IS32VoucherCondition" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32VoucherCondition">
+            <deployment table="is32vouchercondition" typecode="25015"/>
+            <attributes>
+                <attribute qualifier="voucherCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="conditionType" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="condVoucherCodeIdx">
+                    <key attribute="voucherCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Voucher Blacklist - used by DefaultIS32VoucherRedemptionDao -->
+        <itemtype code="IS32VoucherBlacklist" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32VoucherBlacklist">
+            <deployment table="is32voucherblacklist" typecode="25016"/>
+            <attributes>
+                <attribute qualifier="customerId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="voucherCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="blacklistCustomerIdx">
+                    <key attribute="customerId"/>
+                </index>
+                <index name="blacklistVoucherCodeIdx">
+                    <key attribute="voucherCode"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- IS32 Member Profile - used by DefaultIS32MemberProfileDao -->
+        <itemtype code="IS32MemberProfile" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.IS32MemberProfile">
+            <deployment table="is32memberprofile" typecode="25017"/>
+            <attributes>
+                <attribute qualifier="memberId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="firstName" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="lastName" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="email" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="phone" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="loyaltyCardId" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="tier" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="pointBalance" type="java.lang.Double">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="registrationDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="lastActivityDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="preferredStore" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="status" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="memberIdIdx" unique="true">
+                    <key attribute="memberId"/>
+                </index>
+                <index name="memberEmailIdx">
+                    <key attribute="email"/>
+                </index>
+                <index name="memberLoyaltyCardIdx">
+                    <key attribute="loyaltyCardId"/>
+                </index>
+            </indexes>
+        </itemtype>
+
+        <!-- CRM Account - used by DefaultIS32CrmAccountDao -->
+        <itemtype code="CrmAccount" autocreate="true" generate="true"
+                  jaloclass="com.is32.core.jalo.CrmAccount">
+            <deployment table="crmaccount" typecode="25018"/>
+            <attributes>
+                <attribute qualifier="code" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="false" unique="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="name" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="email" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="phone" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="address" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="city" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="state" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="country" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="postalCode" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="createdDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="modifiedDate" type="java.util.Date">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="status" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="accountType" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+                <attribute qualifier="parentAccount" type="java.lang.String">
+                    <modifiers read="true" write="true" search="true" optional="true"/>
+                    <persistence type="property"/>
+                </attribute>
+            </attributes>
+            <indexes>
+                <index name="crmAccountCodeIdx" unique="true">
+                    <key attribute="code"/>
+                </index>
+                <index name="crmAccountStatusIdx">
+                    <key attribute="status"/>
+                </index>
+            </indexes>
+        </itemtype>
+
     </itemtypes>
 </items>
