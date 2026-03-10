@@ -10,6 +10,7 @@
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
 5. **ONE ISSUE PER REVIEW COMMENT — NEVER GROUP**: Each review comment MUST address exactly ONE single issue from ONE single section. NEVER merge findings from different sections into one comment (e.g., do NOT combine a SLOW-xx issue with a runtime exception or a memory issue in the same comment). NEVER list multiple issues from the same section in one comment either. If you find 5 issues, you MUST produce 5 separate review comments. Grouping is a review failure.
 
+6. You MUST perform a **QUERY ANATOMY DECOMPOSITION** for EVERY FlexibleSearch or SQL query found. Before cross-checking against pattern tables, you MUST explicitly decompose the query into its structural components and reason about each one independently. See Section 5.2 for the mandatory decomposition protocol.
 ## 1. Detect Index Usage — Systematic Cross-Check
 
 When reviewing code that includes SQL queries, Hybris FlexibleSearch, or ORM calls (TypeORM, Prisma, SQLAlchemy, Hibernate):
@@ -79,6 +80,43 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 | SQL-01 | SELECT item_t0.PK FROM is32promotion item_t0 JOIN is32bucket item_t1 ON item_t1.p_promotionuid = item_t0.p_uid WHERE ( item_t0.p_redeemdigitalcoupon IS NOT NULL AND item_t0.p_requiredcoupon = '' AND item_t1.p_participateinreward = '' AND (SELECT COUNT('') FROM is32bucket item_t2 WHERE ( item_t2.p_promotionuid = item_t0.p_uid ) AND (item_t2.TypePkString=? )) = '' AND EXISTS( SELECT '' FROM is32threshold item_t3 WHERE ( item_t3.p_promotionuid = item_t0.p_uid AND item_t3.p_thresholdtype = ?) AND (item_t3.TypePkString=? )) AND NOT EXISTS( SELECT '' FROM is32promoexcludeitem item_t4 WHERE ( item_t4.p_itemcode = ? and item_t4.p_bucketuid = item_t1.uniqueid ) AND (item_t4.TypePkString=? )) AND item_t0.p_status = '' AND item_t0.p_suspended = '' AND item_t0.p_startdate <= ? AND item_t0.p_enddate >= ? AND item_t0.p_basestore = ?) AND ((item_t0.TypePkString=? AND item_t1.TypePkString=? )) |
 | SQL-02 | SELECT avg( item_t0.p_rating ) FROM customerreviews item_t0 WHERE ( item_t0.p_product = ?) AND (item_t0.TypePkString=? AND ( item_t0.p_blocked = '' OR item_t0.p_blocked IS NULL)AND ( item_t0.p_approvalstatus !=''))|
 | SQL-03 | SELECT * FROM crmaccount WHERE PK IN (?,?,..., ?)|
+| SQL-04 | select * from {Is32Promotion as p join cart as c on {p.cart} = {c.pk}} |
+
+### 5.2 QUERY ANATOMY DECOMPOSITION PROTOCOL
+
+**MANDATORY — applies to every FlexibleSearch or SQL query in the PR. Do NOT skip.**
+
+**Step A — Parse and label every clause.** For each query string found, identify and list:
+- `SELECT` target (PK only vs. full columns vs. aggregate function)
+- `FROM` and `JOIN` (list every table and join type: INNER/LEFT/cross)
+- `WHERE` conditions (list every predicate individually)
+- `ORDER BY` / `GROUP BY` / `HAVING` if present
+- Subqueries (list each one: correlated vs. non-correlated, scalar vs. EXISTS/NOT EXISTS)
+
+**Step B — For each clause, ask the following questions and explicitly write your reasoning:**
+
+| Clause | Question you MUST answer |
+|--------|--------------------------|
+| Every subquery inside `{{ }}` | "Is this correlated (references outer table)? If yes → flag SLOW-10 / SQL-05 / SQL-06" |
+| Every `JOIN` | "What is the cardinality: 1:1, 1:N, or N:M? If 1:N or N:M without aggregation → flag SLOW-06" |
+| Every `JOIN` | "Does this JOIN pattern (tables joined + join column) structurally match any JOIN in Section 5.1 patterns? If yes → flag the corresponding SQL-nn immediately, no further justification needed" |
+| `ORDER BY` on any column | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag SLOW-05 + SLOW-07 escalated to Critical" |
+| `WHERE` with 2+ columns | "Does a composite index cover this exact combination? If no → flag Section 1 composite index issue" |
+| Entire query | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag SLOW-05 as Critical regardless of query complexity" |
+| `flexibleSearchService` field | "Is it validated non-null before use (via @Required, constructor injection, or null-check)? If no → flag Section 3 NPE risk" |
+
+**Step C — Cross-check JOIN patterns against Section 5.1.**
+After extracting all JOIN clauses in Step A, compare each JOIN against the JOIN patterns defined in the SQL-nn rules in Section 5.1. Focus exclusively on the JOIN structure: which tables are joined, on which columns, and with which join type. If any JOIN in the query is structurally similar to a JOIN in a Section 5.1 pattern, you MUST flag it with the corresponding SQL-nn rule and produce a warning — regardless of the surrounding WHERE conditions, business logic, or any other context. A matching JOIN pattern alone is sufficient grounds for a mandatory warning. Do NOT attempt to assess general risk or find other justifications; the JOIN pattern match is the sole criterion.
+
+**Step D — Determine severity using escalation.**
+If a single query triggers multiple issues (e.g., unbounded result set + ORDER BY + correlated subquery), the effective severity of each issue is NEVER downgraded. Each is its own separate comment. The comment for SLOW-05 MUST be Critical even if you also flag SQL-07 separately.
+
+**FAILURE MODES — these are automatic review failures:**
+- Skipping Step A or Step B for any query in the PR
+- Flagging ORDER BY without checking `setMaxResults` at the call site
+- Marking Section 3 [x] in the checklist without explicitly checking every `flexibleSearchService` field for null-safety
+- Writing a single comment that combines findings from two different rules (e.g., SLOW-05 + SQL-07 in one comment)
+- Skipping Step C JOIN pattern check for any query in the PR
 
 ## 6. JAVA CODING PERFORMANCE
 
@@ -133,4 +171,3 @@ Before submitting the review, verify ALL sections have been evaluated:
 - [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07) and FlexibleSearch patterns cross-checked (SQL-01 through SQL-03)
 - [ ] Section 6: Java coding performance scanned
 - [ ] Section 7: Every issue follows the structured output format — ONE issue per review comment, no cross-section grouping
-
