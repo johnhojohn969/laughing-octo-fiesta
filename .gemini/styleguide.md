@@ -9,7 +9,7 @@
 3. You MUST use the structured output format (Section 7) for every issue. No free-form paragraphs.
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
 5. **ONE ISSUE PER REVIEW COMMENT — NEVER GROUP**: Each review comment MUST address exactly ONE single issue from ONE single section. NEVER merge findings from different sections into one comment (e.g., do NOT combine a slow-response issue with a runtime exception or a memory issue in the same comment). NEVER list multiple issues from the same section in one comment either. If you find 5 issues, you MUST produce 5 separate review comments. Grouping is a review failure.
-6. You MUST perform a **QUERY ANATOMY DECOMPOSITION** for EVERY FlexibleSearch or SQL query found. Before cross-checking against pattern tables, you MUST explicitly decompose the query into its structural components and reason about each one independently. See Section 5.2 for the mandatory decomposition protocol.
+6. You MUST perform **JOIN PATTERN DETECTION** for EVERY FlexibleSearch or SQL query found. Extract JOIN fingerprints and cross-check against Section 5.1 patterns. See Section 5.2 for the mandatory protocol.
 
 ## 1. Detect Index Usage — Systematic Cross-Check
 
@@ -75,53 +75,63 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 | SQL-03 | SELECT * FROM crmaccount WHERE PK IN (?,?,..., ?)|
 | SQL-04 | select * from {Is32Promotion as p join cart as c on {p.cart} = {c.pk}} |
 
-### 5.2 QUERY ANATOMY DECOMPOSITION PROTOCOL
+### 5.2 JOIN PATTERN DETECTION PROTOCOL
 
 **MANDATORY — applies to every FlexibleSearch or SQL query in the PR. Do NOT skip.**
 
-**Step A — Parse and label every clause.** For each query string found, identify and list:
-- `SELECT` target (PK only vs. full columns vs. aggregate function)
-- `FROM` and `JOIN` (list every table and join type: INNER/LEFT/cross)
-- `WHERE` conditions (list every predicate individually)
-- `ORDER BY` / `GROUP BY` / `HAVING` if present
-- Subqueries (list each one: correlated vs. non-correlated, scalar vs. EXISTS/NOT EXISTS)
+#### 5.2.1 Extract JOIN Fingerprints
 
-**Step B — For each clause, ask the following questions and explicitly write your reasoning:**
+For each query, extract every JOIN into a fingerprint tuple:
 
-| Clause | Question you MUST answer |
-|--------|--------------------------|
-| Every subquery inside `{{ }}` | "Is this correlated (references outer table)? If yes → flag as a correlated subquery performance issue using the appropriate rule from Section 2 or Section 5.1 if a matching pattern exists" |
-| Every `JOIN` | "What is the cardinality: 1:1, 1:N, or N:M? If 1:N or N:M without aggregation → flag the corresponding Cartesian Product / JOIN Explosion rule from Section 2" |
-| Every `JOIN` | "Does this JOIN pattern (tables joined + join column) structurally match any JOIN in Section 5.1 patterns? If yes → flag the corresponding SQL-nn immediately, no further justification needed" |
-| `ORDER BY` on any column | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag the Unbounded Result Set rule and the Large Intermediate Result Sets rule from Section 2, both escalated to Critical" |
-| `WHERE` with 2+ columns | "Does a composite index cover this exact combination? If no → flag Section 1 composite index issue" |
-| Entire query | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag the Unbounded Result Set rule from Section 2 as Critical regardless of query complexity" |
-| `flexibleSearchService` field | "Is it validated non-null before use (via @Required, constructor injection, or null-check)? If no → flag Section 3 NPE risk" |
+> **(table_left, table_right, join_column_left, join_column_right)**
 
-**Step C — Cross-check JOIN patterns against Section 5.1.**
+Ignore aliases, WHERE clauses, subqueries, and surrounding business logic — only the tables and join columns matter.
 
-After extracting all JOIN clauses in Step A, compare each JOIN against the JOIN patterns defined in the SQL-nn rules in Section 5.1. Focus exclusively on the JOIN structure: which tables are joined, on which columns, and with which join type. If any JOIN in the query is structurally similar to a JOIN in a Section 5.1 pattern, you MUST flag it with the corresponding SQL-nn rule and produce a warning — regardless of the surrounding WHERE conditions, business logic, or any other context. A matching JOIN pattern alone is sufficient grounds for a mandatory warning. Do NOT attempt to assess general risk or find other justifications; the JOIN pattern match is the sole criterion.
+If a query contains multiple JOINs, extract one fingerprint per JOIN.
 
-**SQL-nn pattern matching is alias-invariant**: the match criterion is ONLY the combination of (1) the table names involved in the JOIN and (2) the join columns used in the ON clause. Alias names, WHERE conditions, EXISTS/NOT EXISTS subqueries, and surrounding business logic are irrelevant to the match decision.
+#### 5.2.2 Match Against Section 5.1 Patterns
 
-**Decomposed query rule**: If a developer splits one large query into multiple smaller queries (e.g., separate DAO methods each containing a partial JOIN), EACH sub-query MUST be checked independently against Section 5.1 patterns. A decomposed query does NOT escape SQL-nn flagging.
+Extract the same fingerprint tuples from each SQL-nn pattern in Section 5.1. Then compare:
 
-**Independence from Section 2 rules**: SQL-nn flags and Section 2 flags are fully independent. Finding a Cartesian Product / JOIN Explosion issue on a query does NOT exempt it from SQL-nn pattern check. Both MUST be flagged in separate comments if applicable.
+| Query fingerprint field | Must match SQL-nn fingerprint field |
+|------------------------|-------------------------------------|
+| table_left | table_left (same Hybris type / raw table) |
+| table_right | table_right |
+| join_column_left | join_column_left (same attribute / column) |
+| join_column_right | join_column_right |
 
-**Cross-check order**: Step C MUST run as a standalone pass AFTER Step A completes, not interleaved with Section 2 detection. Complete all JOIN extractions first, then perform one dedicated SQL-nn cross-check pass. This prevents Section 2 findings from absorbing what should be a separate SQL-nn flag.
+**Match = all four fields align → flag the corresponding SQL-nn rule immediately.** No further justification needed; the JOIN structure alone is sufficient.
 
-**Step D — Determine severity using escalation.**
+#### 5.2.3 Matching Rules
 
-If a single query triggers multiple issues (e.g., unbounded result set + ORDER BY + correlated subquery), the effective severity of each issue is NEVER downgraded. Each is its own separate comment. The comment for the Unbounded Result Set rule MUST be Critical even if you also flag the Large Intermediate Result Sets rule separately.
+- **Alias-invariant**: match on table names and join columns only; aliases are irrelevant.
+- **Decomposed queries**: if a large query is split across multiple DAO methods, check EACH sub-query independently. A partial query does NOT escape SQL-nn flagging.
+- **Independent from Section 2**: SQL-nn flags and Section 2 flags (e.g., Cartesian Product) are fully independent. Both MUST be flagged in separate comments if applicable.
+- **Execution order**: complete ALL fingerprint extractions first (5.2.1), then perform one dedicated cross-check pass (5.2.2). Do NOT interleave with Section 2 detection.
 
-**FAILURE MODES — these are automatic review failures:**
-- Skipping Step A or Step B for any query in the PR
+#### 5.2.4 Supplementary Checks (per query)
+
+After JOIN pattern detection, also verify:
+
+| Check | Action |
+|-------|--------|
+| Correlated subquery | Flag if subquery references outer table → Section 2 or matching SQL-nn |
+| JOIN cardinality | 1:N or N:M without aggregation → flag Cartesian Product (Section 2) |
+| `ORDER BY` present | Verify `setMaxResults()`/`setCount()` at call site; if absent → Critical |
+| Multi-column `WHERE` | Verify composite index coverage → Section 1 |
+| `flexibleSearchService` field | Verify non-null (via @Required, constructor injection, or null-check) → Section 3 |
+| Unbounded result set | No `setMaxResults()`/`setCount()` → Critical regardless of query complexity |
+
+#### 5.2.5 Severity
+
+Each issue is its own separate comment. Severity is NEVER downgraded when a query triggers multiple issues.
+
+#### 5.2.6 Failure Modes (automatic review failures)
+
+- Skipping JOIN fingerprint extraction or cross-check for any query
 - Flagging ORDER BY without checking `setMaxResults` at the call site
-- Marking Section 3 [x] in the checklist without explicitly checking every `flexibleSearchService` field for null-safety
 - Writing a single comment that combines findings from two different rules
-- Skipping Step C JOIN pattern check for any query in the PR
-- Flagging a JOIN as Cartesian Product / JOIN Explosion WITHOUT separately checking the same JOIN against SQL-nn patterns in Section 5.1 — both checks are mandatory and independent
-- Skipping SQL-nn flagging because the query is "simpler" or "partial" relative to the full SQL-nn pattern — a query containing the core JOIN table+column structure of any SQL-nn pattern MUST be flagged regardless of how much surrounding context differs
+- Skipping SQL-nn flagging because the query is "simpler" or "partial" — a matching JOIN fingerprint MUST be flagged regardless of surrounding context
 
 ## 6. JAVA CODING PERFORMANCE
 
