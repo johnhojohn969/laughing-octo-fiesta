@@ -8,9 +8,9 @@
 2. You MUST explicitly check each item in the Completeness Checklist (Section 9) and include the filled checklist in your review output.
 3. You MUST use the structured output format (Section 7) for every issue. No free-form paragraphs.
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
-5. **ONE ISSUE PER REVIEW COMMENT — NEVER GROUP**: Each review comment MUST address exactly ONE single issue from ONE single section. NEVER merge findings from different sections into one comment (e.g., do NOT combine a SLOW-xx issue with a runtime exception or a memory issue in the same comment). NEVER list multiple issues from the same section in one comment either. If you find 5 issues, you MUST produce 5 separate review comments. Grouping is a review failure.
-
+5. **ONE ISSUE PER REVIEW COMMENT — NEVER GROUP**: Each review comment MUST address exactly ONE single issue from ONE single section. NEVER merge findings from different sections into one comment (e.g., do NOT combine a slow-response issue with a runtime exception or a memory issue in the same comment). NEVER list multiple issues from the same section in one comment either. If you find 5 issues, you MUST produce 5 separate review comments. Grouping is a review failure.
 6. You MUST perform a **QUERY ANATOMY DECOMPOSITION** for EVERY FlexibleSearch or SQL query found. Before cross-checking against pattern tables, you MUST explicitly decompose the query into its structural components and reason about each one independently. See Section 5.2 for the mandatory decomposition protocol.
+
 ## 1. Detect Index Usage — Systematic Cross-Check
 
 When reviewing code that includes SQL queries, Hybris FlexibleSearch, or ORM calls (TypeORM, Prisma, SQLAlchemy, Hibernate):
@@ -25,7 +25,7 @@ When reviewing code that includes SQL queries, Hybris FlexibleSearch, or ORM cal
 | `{pt.elabPromotionDisplayType}` | IS32PromotionTag | ? | — | requires verification |
 | ... | ... | ... | ... | ... |
 
-  **You MUST list every single column** — not just the ones that are missing indexes. Scan **all** `*-items.xml` files in the repository to populate this table. For Hybris built-in types (e.g., `Coupon`, `Product`, `Customer`, `CouponRedemption`), note whether the join column is a known indexed attribute (e.g., `Product.code`, `Coupon.couponId`) or flag it as "requires verification — built-in type".
+**You MUST list every single column** — not just the ones that are missing indexes. Scan **all** `*-items.xml` files in the repository to populate this table. For Hybris built-in types (e.g., `Coupon`, `Product`, `Customer`, `CouponRedemption`), note whether the join column is a known indexed attribute (e.g., `Product.code`, `Coupon.couponId`) or flag it as "requires verification — built-in type".
 
 - **Detection**: Flag any column used in a JOIN ON or WHERE clause that does NOT appear in an index.
 - **Composite Index Check**: When a WHERE clause filters on 2+ columns simultaneously (e.g., `status = ? AND suspended = ? AND startDate <= ? AND endDate > ?`), check whether a composite index covers the full filter combination. If only partial indexes exist, recommend a composite index covering the most selective column combination. **Explicitly state the recommended composite index column order** (most selective column first).
@@ -41,11 +41,6 @@ Flag the following patterns as "Potential Slow Performance". When flagging an is
 | SLOW-02 | Functions in WHERE on indexed columns (e.g., `WHERE YEAR(created_at) = 2023`) — prevents index usage |
 | SLOW-03 | N+1 Queries: loop executing query per iteration, or DAO returning raw `List<List<Object>>` / `List<Object[]>` that callers re-query. Flag as N+1 risk; recommend aggregating in SQL or providing a higher-level method |
 | SLOW-04 | Mismatched Data Types: string column compared with numeric value — implicit conversion ignores index |
-| SLOW-05 | **[CRITICAL]** Unbounded Result Set: no `LIMIT` / pagination (`setMaxResults`, `setStart`) / row-count cap. Queries joining 3+ tables without pagination can cause OOM — **automatic CRITICAL, no exceptions** |
-| SLOW-06 | Cartesian Product / JOIN Explosion: LEFT JOIN on 1:N without aggregation multiplies result set. **Quantify** the multiplication factor (e.g., "1000 CouponRedemptions × each row = 1000× explosion") |
-| SLOW-07 | Large Intermediate Result Sets: join order doesn't reduce rows early, causing unnecessary data processing |
-| SLOW-08 | **[HIGH]** Client-side Aggregation: caller aggregates in Java (GROUP BY, SUM, COUNT, DISTINCT) instead of SQL. Loading millions of rows into JVM heap wastes memory, CPU, and network I/O |
-| SLOW-09 | OR-clause on different columns or mixed operators preventing single index scan. **Exception**: `(col IS NULL OR col <= ?date)` is a standard nullable-date guard — do NOT flag |
 
 ## 3. JAVA RUNTIME EXCEPTION
 
@@ -71,9 +66,7 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 ### 5.1 FLEXIBLESEARCH QUERY PATTERN DETECTION
 
-**MANDATORY**: When reviewing Java code that contains FlexibleSearch queries (strings passed to `flexibleSearchService.search()`, `FlexibleSearchQuery`, or any query string that uses Hybris FlexibleSearch syntax like `SELECT ... FROM {TypeName}` or `{p:attribute}`), you MUST cross-check against the patterns below. If a FlexibleSearch query structurally matches or resembles any of these patterns, flag it using the corresponding `SQL-nn` rule index.
-
-**To add new rules**: append a row with a new `SQL-nn` index.
+**MANDATORY**: When reviewing Java code that contains FlexibleSearch queries (strings passed to `flexibleSearchService.search()`, `FlexibleSearchQuery`, or any query string that uses Hybris FlexibleSearch syntax like `SELECT ... FROM {TypeName}` or `{p:attribute}`), you MUST cross-check against the patterns below. If a FlexibleSearch query structurally matches or resembles any of these patterns, flag it using the corresponding `SQL-nn` rule index. **To add new rules**: append a row with a new `SQL-nn` index.
 
 | Rule | Pattern |
 |------|---------|
@@ -97,26 +90,38 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 | Clause | Question you MUST answer |
 |--------|--------------------------|
-| Every subquery inside `{{ }}` | "Is this correlated (references outer table)? If yes → flag SLOW-10 / SQL-05 / SQL-06" |
-| Every `JOIN` | "What is the cardinality: 1:1, 1:N, or N:M? If 1:N or N:M without aggregation → flag SLOW-06" |
+| Every subquery inside `{{ }}` | "Is this correlated (references outer table)? If yes → flag as a correlated subquery performance issue using the appropriate rule from Section 2 or Section 5.1 if a matching pattern exists" |
+| Every `JOIN` | "What is the cardinality: 1:1, 1:N, or N:M? If 1:N or N:M without aggregation → flag the corresponding Cartesian Product / JOIN Explosion rule from Section 2" |
 | Every `JOIN` | "Does this JOIN pattern (tables joined + join column) structurally match any JOIN in Section 5.1 patterns? If yes → flag the corresponding SQL-nn immediately, no further justification needed" |
-| `ORDER BY` on any column | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag SLOW-05 + SLOW-07 escalated to Critical" |
+| `ORDER BY` on any column | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag the Unbounded Result Set rule and the Large Intermediate Result Sets rule from Section 2, both escalated to Critical" |
 | `WHERE` with 2+ columns | "Does a composite index cover this exact combination? If no → flag Section 1 composite index issue" |
-| Entire query | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag SLOW-05 as Critical regardless of query complexity" |
+| Entire query | "Does the calling Java method call `setMaxResults()` or `setCount()`? If no → flag the Unbounded Result Set rule from Section 2 as Critical regardless of query complexity" |
 | `flexibleSearchService` field | "Is it validated non-null before use (via @Required, constructor injection, or null-check)? If no → flag Section 3 NPE risk" |
 
 **Step C — Cross-check JOIN patterns against Section 5.1.**
+
 After extracting all JOIN clauses in Step A, compare each JOIN against the JOIN patterns defined in the SQL-nn rules in Section 5.1. Focus exclusively on the JOIN structure: which tables are joined, on which columns, and with which join type. If any JOIN in the query is structurally similar to a JOIN in a Section 5.1 pattern, you MUST flag it with the corresponding SQL-nn rule and produce a warning — regardless of the surrounding WHERE conditions, business logic, or any other context. A matching JOIN pattern alone is sufficient grounds for a mandatory warning. Do NOT attempt to assess general risk or find other justifications; the JOIN pattern match is the sole criterion.
 
+**SQL-nn pattern matching is alias-invariant**: the match criterion is ONLY the combination of (1) the table names involved in the JOIN and (2) the join columns used in the ON clause. Alias names, WHERE conditions, EXISTS/NOT EXISTS subqueries, and surrounding business logic are irrelevant to the match decision.
+
+**Decomposed query rule**: If a developer splits one large query into multiple smaller queries (e.g., separate DAO methods each containing a partial JOIN), EACH sub-query MUST be checked independently against Section 5.1 patterns. A decomposed query does NOT escape SQL-nn flagging.
+
+**Independence from Section 2 rules**: SQL-nn flags and Section 2 flags are fully independent. Finding a Cartesian Product / JOIN Explosion issue on a query does NOT exempt it from SQL-nn pattern check. Both MUST be flagged in separate comments if applicable.
+
+**Cross-check order**: Step C MUST run as a standalone pass AFTER Step A completes, not interleaved with Section 2 detection. Complete all JOIN extractions first, then perform one dedicated SQL-nn cross-check pass. This prevents Section 2 findings from absorbing what should be a separate SQL-nn flag.
+
 **Step D — Determine severity using escalation.**
-If a single query triggers multiple issues (e.g., unbounded result set + ORDER BY + correlated subquery), the effective severity of each issue is NEVER downgraded. Each is its own separate comment. The comment for SLOW-05 MUST be Critical even if you also flag SQL-07 separately.
+
+If a single query triggers multiple issues (e.g., unbounded result set + ORDER BY + correlated subquery), the effective severity of each issue is NEVER downgraded. Each is its own separate comment. The comment for the Unbounded Result Set rule MUST be Critical even if you also flag the Large Intermediate Result Sets rule separately.
 
 **FAILURE MODES — these are automatic review failures:**
 - Skipping Step A or Step B for any query in the PR
 - Flagging ORDER BY without checking `setMaxResults` at the call site
 - Marking Section 3 [x] in the checklist without explicitly checking every `flexibleSearchService` field for null-safety
-- Writing a single comment that combines findings from two different rules (e.g., SLOW-05 + SQL-07 in one comment)
+- Writing a single comment that combines findings from two different rules
 - Skipping Step C JOIN pattern check for any query in the PR
+- Flagging a JOIN as Cartesian Product / JOIN Explosion WITHOUT separately checking the same JOIN against SQL-nn patterns in Section 5.1 — both checks are mandatory and independent
+- Skipping SQL-nn flagging because the query is "simpler" or "partial" relative to the full SQL-nn pattern — a query containing the core JOIN table+column structure of any SQL-nn pattern MUST be flagged regardless of how much surrounding context differs
 
 ## 6. JAVA CODING PERFORMANCE
 
@@ -128,7 +133,6 @@ To ensure reviews are actionable, every issue MUST follow this exact format. **D
 
 ```
 ### [SEVERITY: Critical/High/Medium] — Short title
-
 **Rule**: ONE single rule index (e.g., SLOW-01 or TABLE-03)
 **Location**: file:line or query line reference
 **Issue**: Concrete description of what is wrong
@@ -138,7 +142,7 @@ To ensure reviews are actionable, every issue MUST follow this exact format. **D
 ```
 
 **Rules**:
-- **ONE ISSUE = ONE COMMENT**: Each review comment MUST contain exactly ONE issue from ONE section. Do NOT group multiple issues into a single comment, even if they are in the same file or same line. Do NOT mix findings from different sections (e.g., a SLOW-xx issue and a Section 3 runtime exception MUST be two separate comments). If a code location triggers 3 different issues, produce 3 separate review comments.
+- **ONE ISSUE = ONE COMMENT**: Each review comment MUST contain exactly ONE issue from ONE section. Do NOT group multiple issues into a single comment, even if they are in the same file or same line. Do NOT mix findings from different sections (e.g., a slow-response issue and a Section 3 runtime exception MUST be two separate comments). If a code location triggers 3 different issues, produce 3 separate review comments.
 - Do NOT produce vague warnings like "this query may be slow" without specifying which join/filter is the problem, which index is missing, and what the fix is.
 - **Impact must be quantified** where possible: estimate table sizes, row multiplication factors, or memory consumption. "Millions of rows" is better than "many rows". "500MB heap consumed loading 2M rows of 4 columns" is better than "high memory usage".
 - **Fix must include code** for Critical and High issues. A textual description alone is insufficient.
@@ -161,13 +165,12 @@ Use the following to determine severity. Do not downgrade severity for convenien
 **MANDATORY**: You MUST include this filled checklist at the END of your review. Mark each item with [x] when completed. A review missing this checklist or with unchecked mandatory items will be considered incomplete.
 
 Before submitting the review, verify ALL sections have been evaluated:
-
 - [ ] Section 1: **COMPLETE** index verification table produced — every JOIN ON column and every WHERE column listed (not just flagged ones)
 - [ ] Section 1: Composite index check performed for multi-column WHERE filters
 - [ ] Section 1: Both sides of every JOIN verified for indexes
-- [ ] Section 2: All slow patterns checked (SLOW-01 through SLOW-09)
+- [ ] Section 2: All slow patterns in the Section 2 table checked
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
-- [ ] Section 5: Every watched table cross-checked against the query (TABLE-01 through TABLE-07) and FlexibleSearch patterns cross-checked (SQL-01 through SQL-03)
+- [ ] Section 5: Every query cross-checked against ALL rows in the Section 5 watched tables table, and every FlexibleSearch query cross-checked against ALL rows in the Section 5.1 patterns table
 - [ ] Section 6: Java coding performance scanned
 - [ ] Section 7: Every issue follows the structured output format — ONE issue per review comment, no cross-section grouping
