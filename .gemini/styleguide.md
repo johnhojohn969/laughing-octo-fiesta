@@ -9,7 +9,7 @@
 3. You MUST use the structured output format (Section 7) for every issue. No free-form paragraphs.
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
 5. **ONE ISSUE PER REVIEW COMMENT — NEVER GROUP**: Each review comment MUST address exactly ONE single issue from ONE single section. NEVER merge findings from different sections into one comment (e.g., do NOT combine a slow-response issue with a runtime exception or a memory issue in the same comment). NEVER list multiple issues from the same section in one comment either. If you find 5 issues, you MUST produce 5 separate review comments. Grouping is a review failure.
-6. You MUST perform **JOIN PATTERN DETECTION** for EVERY FlexibleSearch or SQL query found. Extract JOIN fingerprints and cross-check against Section 5.1 patterns. See Section 5.2 for the mandatory protocol.
+6. For EVERY FlexibleSearch or SQL query found, you MUST identify which **SQL-nn** pattern (from Section 5.1) it matches. See Section 5.2 for how to detect matches. Always flag using the SQL-nn rule ID, never "5.2".
 
 ## 1. Detect Index Usage — Systematic Cross-Check
 
@@ -75,63 +75,22 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 | SQL-03 | SELECT * FROM crmaccount WHERE PK IN (?,?,..., ?)|
 | SQL-04 | select * from {Is32Promotion as p join cart as c on {p.cart} = {c.pk}} |
 
-### 5.2 JOIN PATTERN DETECTION PROTOCOL
+### 5.2 How to Detect SQL-nn Matches
 
-**MANDATORY — applies to every FlexibleSearch or SQL query in the PR. Do NOT skip.**
+This section contains NO rules. Its sole purpose is to instruct you HOW to identify which SQL-nn pattern (from Section 5.1) a query matches. When you find a match, flag it as **SQL-nn** (e.g., SQL-01, SQL-04) — never as "5.2" or any sub-number of 5.2.
 
-#### 5.2.1 Extract JOIN Fingerprints
+**For every FlexibleSearch or SQL query in the PR, do the following:**
 
-For each query, extract every JOIN into a fingerprint tuple:
+1. **Extract JOIN fingerprints** from the query. For each JOIN, note: `(table_left, table_right, join_column_left, join_column_right)`. Ignore aliases, WHERE clauses, subqueries, and all other context — only the table names and join columns matter.
 
-> **(table_left, table_right, join_column_left, join_column_right)**
+2. **Compare each fingerprint against Section 5.1 patterns.** For each SQL-nn pattern, extract the same fingerprint tuple. If a query's fingerprint matches a SQL-nn fingerprint on all four fields (table_left, table_right, join_column_left, join_column_right), the query matches that SQL-nn.
 
-Ignore aliases, WHERE clauses, subqueries, and surrounding business logic — only the tables and join columns matter.
+3. **Flag the matched SQL-nn rule.** Your review comment must reference the specific SQL-nn rule (e.g., "This query matches **SQL-01**" or "This JOIN matches **SQL-04**"). No further justification is needed — the JOIN structure match is sufficient.
 
-If a query contains multiple JOINs, extract one fingerprint per JOIN.
-
-#### 5.2.2 Match Against Section 5.1 Patterns
-
-Extract the same fingerprint tuples from each SQL-nn pattern in Section 5.1. Then compare:
-
-| Query fingerprint field | Must match SQL-nn fingerprint field |
-|------------------------|-------------------------------------|
-| table_left | table_left (same Hybris type / raw table) |
-| table_right | table_right |
-| join_column_left | join_column_left (same attribute / column) |
-| join_column_right | join_column_right |
-
-**Match = all four fields align → flag the corresponding SQL-nn rule immediately.** No further justification needed; the JOIN structure alone is sufficient.
-
-#### 5.2.3 Matching Rules
-
-- **Alias-invariant**: match on table names and join columns only; aliases are irrelevant.
-- **Decomposed queries**: if a large query is split across multiple DAO methods, check EACH sub-query independently. A partial query does NOT escape SQL-nn flagging.
-- **Independent from Section 2**: SQL-nn flags and Section 2 flags (e.g., Cartesian Product) are fully independent. Both MUST be flagged in separate comments if applicable.
-- **Execution order**: complete ALL fingerprint extractions first (5.2.1), then perform one dedicated cross-check pass (5.2.2). Do NOT interleave with Section 2 detection.
-
-#### 5.2.4 Supplementary Checks (per query)
-
-After JOIN pattern detection, also verify:
-
-| Check | Action |
-|-------|--------|
-| Correlated subquery | Flag if subquery references outer table → Section 2 or matching SQL-nn |
-| JOIN cardinality | 1:N or N:M without aggregation → flag Cartesian Product (Section 2) |
-| `ORDER BY` present | Verify `setMaxResults()`/`setCount()` at call site; if absent → Critical |
-| Multi-column `WHERE` | Verify composite index coverage → Section 1 |
-| `flexibleSearchService` field | Verify non-null (via @Required, constructor injection, or null-check) → Section 3 |
-| Unbounded result set | No `setMaxResults()`/`setCount()` → Critical regardless of query complexity |
-
-#### 5.2.5 Severity
-
-Each issue is its own separate comment. Severity is NEVER downgraded when a query triggers multiple issues.
-
-#### 5.2.6 Failure Modes (automatic review failures)
-
-- Skipping JOIN fingerprint extraction or cross-check for any query
-- Flagging ORDER BY without checking `setMaxResults` at the call site
-- Writing a single comment that combines findings from two different rules
-- Skipping SQL-nn flagging because the query is "simpler" or "partial" — a matching JOIN fingerprint MUST be flagged regardless of surrounding context
+**Matching guidance:**
+- Aliases are irrelevant — match on actual table names and column names only.
+- If a query is split across multiple DAO methods, check each sub-query independently.
+- If a query has multiple JOINs, check each JOIN separately — one query can match multiple SQL-nn patterns.
 
 ## 6. JAVA CODING PERFORMANCE
 
