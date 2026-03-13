@@ -74,7 +74,7 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 | SQL-02 | SELECT avg( item_t0.p_rating ) FROM customerreviews item_t0 WHERE ( item_t0.p_product = ?) AND (item_t0.TypePkString=? AND ( item_t0.p_blocked = '' OR item_t0.p_blocked IS NULL)AND ( item_t0.p_approvalstatus !=''))|
 | SQL-03 | SELECT * FROM crmaccount WHERE PK IN (?,?,..., ?)|
 | SQL-04 | select * from {Is32Promotion as p join cart as c on {p.cart} = {c.pk}} |
-| SQL-05 | SELECT {cr.pk}, {cr.rating}, {p.code}, {c.uid}, {bs.uid} FROM {CustomerReview AS cr JOIN Product AS p ON {cr.product} = {p.pk} JOIN Customer AS c ON {cr.user} = {c.pk} JOIN BaseStore AS bs ON {cr.baseStore} = {bs.pk}} WHERE {cr.approvalStatus} = ? AND ({cr.blocked} = ? OR {cr.blocked} IS NULL) AND {bs.uid} = ? AND {cr.creationtime} >= ? ORDER BY {cr.creationtime} DESC |
+| SQL-05 | SELECT item_t0.PK, item_t0.p_rating, item_t1.p_code, item_t2.p_uid, item_t3.p_uid FROM customerreview item_t0 JOIN product item_t1 ON item_t0.p_product = item_t1.PK JOIN customer item_t2 ON item_t0.p_user = item_t2.PK JOIN basestore item_t3 ON item_t0.p_basestore = item_t3.PK WHERE item_t0.p_approvalstatus = ? AND (item_t0.p_blocked = '' OR item_t0.p_blocked IS NULL) AND item_t3.p_uid = ? AND item_t0.createdTS >= ? ORDER BY item_t0.createdTS DESC |
 
 ### 5.2 How to Detect SQL-nn Matches
 
