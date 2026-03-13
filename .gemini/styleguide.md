@@ -78,17 +78,17 @@ Scan every Java file for memory retention issues (static refs, unclosed resource
 
 ### 5.2 How to Detect SQL-nn Matches
 
-This section contains NO rules. Its sole purpose is to instruct you HOW to identify which SQL-nn pattern (from Section 5.1) a query matches. When you find a match, flag it as **SQL-nn** (e.g., SQL-01, SQL-04) — never as "5.2" or any sub-number of 5.2.
+This section contains NO rules. Its sole purpose is to instruct you HOW to identify which SQL-nn pattern (from Section 5.1) a query matches. When you find a match, flag it as **SQL-nn** — never as "5.2" or any sub-number of 5.2.
 
-**Important — Invalid input for JOIN fingerprint matching:** SQL-nn patterns that contain **no JOIN clauses** (e.g., SQL-02 and SQL-03) are **invalid inputs** for the JOIN fingerprint detection process described below. Since these patterns have no JOIN, they produce no fingerprint tuples and therefore CANNOT be matched using the fingerprint method. When you encounter a query in the PR that has no JOINs, **skip the JOIN fingerprint matching entirely** for that query — do not attempt to force-match it against any SQL-nn pattern via fingerprints. These non-JOIN patterns should only be matched by their overall query structure (e.g., same aggregate function on same table with similar WHERE filters), not by the JOIN-based method below.
+**Important — Invalid input for JOIN fingerprint matching:** SQL-nn patterns that contain **no JOIN clauses** are **invalid inputs** for the JOIN fingerprint detection process described below. Since these patterns have no JOIN, they produce no fingerprint tuples and therefore CANNOT be matched using the fingerprint method. When you encounter a query in the PR that has no JOINs, **skip the JOIN fingerprint matching entirely** for that query — do not attempt to force-match it against any SQL-nn pattern via fingerprints. These non-JOIN patterns should only be matched by their overall query structure (e.g., same aggregate function on same table with similar WHERE filters), not by the JOIN-based method below. To identify which patterns have no JOINs, inspect the SQL-nn table in Section 5.1 directly.
 
 **For every FlexibleSearch or SQL query in the PR, do the following:**
 
-1. **Extract JOIN fingerprints** from the query. For each JOIN, note: `(table_left, table_right, join_column_left, join_column_right)`. Ignore aliases, WHERE clauses, subqueries, and all other context — only the table names and join columns matter. **If the query has no JOINs, skip steps 1–3 and instead match by overall query structure against non-JOIN patterns like SQL-02 and SQL-03.**
+1. **Extract JOIN fingerprints** from the query. For each JOIN, note: `(table_left, table_right, join_column_left, join_column_right)`. Ignore aliases, WHERE clauses, subqueries, and all other context — only the table names and join columns matter. **If the query has no JOINs, skip steps 1–3 and instead match by overall query structure against non-JOIN patterns in Section 5.1.**
 
 2. **Compare each fingerprint against Section 5.1 patterns.** For each SQL-nn pattern **that contains at least one JOIN**, extract the same fingerprint tuple. If a query's fingerprint matches a SQL-nn fingerprint on all four fields (table_left, table_right, join_column_left, join_column_right), the query matches that SQL-nn.
 
-3. **Flag the matched SQL-nn rule.** Your review comment must reference the specific SQL-nn rule (e.g., "This query matches **SQL-01**" or "This JOIN matches **SQL-04**"). No further justification is needed — the JOIN structure match is sufficient.
+3. **Flag the matched SQL-nn rule.** Your review comment must reference the specific SQL-nn rule that matched. No further justification is needed — the JOIN structure match is sufficient.
 
 **Matching guidance:**
 - Aliases are irrelevant — match on actual table names and column names only.
