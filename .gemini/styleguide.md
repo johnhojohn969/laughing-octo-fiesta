@@ -4,7 +4,7 @@
 
 **These rules are NON-NEGOTIABLE. Skipping any of them is a review failure.**
 
-1. You MUST produce a COMPLETE Index Verification Table for EVERY column in JOIN ON and WHERE clauses — not just the ones you suspect are missing indexes. A partial table is unacceptable.
+1. You MUST check EVERY column used in JOIN ON and WHERE clauses for index coverage. Each missing or problematic index MUST be flagged as its own separate review comment using the structured format (Section 7). Do NOT summarize index findings into a single table or a single comment.
 2. You MUST explicitly check each item in the Completeness Checklist (Section 9) and include the filled checklist in your review output.
 3. You MUST use the structured output format (Section 7) for every issue. No free-form paragraphs.
 4. You MUST flag client-side aggregation that should be done in SQL as a separate issue with its own severity.
@@ -16,20 +16,10 @@
 When reviewing code that includes SQL queries, Hybris FlexibleSearch, or ORM calls (TypeORM, Prisma, SQLAlchemy, Hibernate):
 
 - **Requirement**: Any new query must use `Index Seek` or `Index Scan` on a limited range. Full `Index Scan` or `Table Scan` on large tables is prohibited.
-- **Mandatory Step — Index Verification Table**: For **every** JOIN condition and **every** WHERE filter column in the query, produce a verification table. **You must list ALL columns, not just the problematic ones.** The table must be COMPLETE — a review that only flags 1 column out of 15+ is considered incomplete.
-
-| Column | Table | Has Index? | Index Name | Source File |
-|--------|-------|------------|------------|-------------|
-| `{p.status}` | IS32Promotion | Yes | statusIdx | is32core-items.xml |
-| `{p.redeemDigitalCoupon}` | IS32Promotion | **No** | — | is32core-items.xml |
-| `{pt.elabPromotionDisplayType}` | IS32PromotionTag | ? | — | requires verification |
-| ... | ... | ... | ... | ... |
-
-**You MUST list every single column** — not just the ones that are missing indexes. Scan **all** `*-items.xml` files in the repository to populate this table. For Hybris built-in types (e.g., `Coupon`, `Product`, `Customer`, `CouponRedemption`), note whether the join column is a known indexed attribute (e.g., `Product.code`, `Coupon.couponId`) or flag it as "requires verification — built-in type".
-
-- **Detection**: Flag any column used in a JOIN ON or WHERE clause that does NOT appear in an index.
-- **Composite Index Check**: When a WHERE clause filters on 2+ columns simultaneously (e.g., `status = ? AND suspended = ? AND startDate <= ? AND endDate > ?`), check whether a composite index covers the full filter combination. If only partial indexes exist, recommend a composite index covering the most selective column combination. **Explicitly state the recommended composite index column order** (most selective column first).
-- **Both Sides of JOIN**: Always verify indexes on BOTH sides of a JOIN condition. A missing index on either side can cause a full scan on that table.
+- **How to review**: For **every** JOIN condition and **every** WHERE filter column in the query, verify index coverage by scanning **all** `*-items.xml` files in the repository. For Hybris built-in types (e.g., `Coupon`, `Product`, `Customer`, `CouponRedemption`), check whether the join column is a known indexed attribute (e.g., `Product.code`, `Coupon.couponId`) or flag it as "requires verification — built-in type".
+- **Each finding = one review comment**: When you find a column that is missing an index or has inadequate index coverage, produce a **separate review comment** for that specific column using the structured format (Section 7). Use rule index `IDX-MISSING` for missing indexes, `IDX-COMPOSITE` for missing composite indexes, and `IDX-JOIN` for missing indexes on JOIN sides. Do NOT group multiple index findings into a single table or comment.
+- **Composite Index Check**: When a WHERE clause filters on 2+ columns simultaneously (e.g., `status = ? AND suspended = ? AND startDate <= ? AND endDate > ?`), check whether a composite index covers the full filter combination. If only partial indexes exist, flag it as a separate comment recommending a composite index covering the most selective column combination. **Explicitly state the recommended composite index column order** (most selective column first).
+- **Both Sides of JOIN**: Always verify indexes on BOTH sides of a JOIN condition. A missing index on either side can cause a full scan on that table. Flag each side missing an index as a separate review comment.
 
 ## 2. Slow Response Patterns
 
@@ -137,9 +127,9 @@ Use the following to determine severity. Do not downgrade severity for convenien
 **MANDATORY**: You MUST include this filled checklist at the END of your review. Mark each item with [x] when completed. A review missing this checklist or with unchecked mandatory items will be considered incomplete.
 
 Before submitting the review, verify ALL sections have been evaluated:
-- [ ] Section 1: **COMPLETE** index verification table produced — every JOIN ON column and every WHERE column listed (not just flagged ones)
-- [ ] Section 1: Composite index check performed for multi-column WHERE filters
-- [ ] Section 1: Both sides of every JOIN verified for indexes
+- [ ] Section 1: Every JOIN ON and WHERE column checked for index coverage — each missing index flagged as a separate review comment
+- [ ] Section 1: Composite index check performed for multi-column WHERE filters — flagged as separate comment if missing
+- [ ] Section 1: Both sides of every JOIN verified for indexes — each side missing an index flagged separately
 - [ ] Section 2: All slow patterns in the Section 2 table checked
 - [ ] Section 3: Java runtime exceptions scanned (NPE, unsafe cast, Optional.get, collection bounds)
 - [ ] Section 4: Memory issues scanned (unbounded collections, large result sets in heap, static references)
